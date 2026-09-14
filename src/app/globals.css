@@ -24,3 +24,46 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.1) 40px,
+    rgba(255, 255, 255, 0.04) 80px
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+:root {
+  --nav-btn-width: auto;
+  --nav-btn-height: 50px;
+  --nav-btn-font-size: 10px;
+}
+@media (min-width: 640px) {
+  :root {
+    --nav-btn-width: 42px;
+    --nav-btn-height: 42px;
+    --nav-btn-font-size: 15px;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --nav-btn-width: 195px;
+    --nav-btn-height: 33px;
+    --nav-btn-font-size: 15px;
+  }
+}
