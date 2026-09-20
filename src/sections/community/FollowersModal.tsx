@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   useGetFollowersQuery,
   useGetFollowingQuery,
@@ -24,6 +25,7 @@ export default function FollowersModal({
   onClose,
   initialTab = 'followers',
 }: FollowersModalProps) {
+  const router = useRouter();
   const { data: profile } = useGetProfileQuery();
   const [activeTab, setActiveTab] = useState<FollowTab>(initialTab);
 
@@ -154,7 +156,15 @@ export default function FollowersModal({
               return (
                 <div
                   key={user.id}
-                  className="flex items-center gap-3 py-3 border-b border-white/5 last:border-b-0"
+                  className="flex items-center gap-3 py-3 border-b border-white/5 last:border-b-0 cursor-pointer hover:bg-white/[0.02] rounded-lg transition-colors"
+                  onClick={() => {
+                    onClose();
+                    if (user.id === profile?.user_id) {
+                      router.push('/community/profile');
+                    } else {
+                      router.push(`/community/user/${user.id}`);
+                    }
+                  }}
                 >
                   {/* Avatar */}
                   <div className="w-11 h-11 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
@@ -185,11 +195,14 @@ export default function FollowersModal({
                   {/* Follow button */}
                   {user.id !== profile?.user_id && (
                     <button
-                      onClick={() =>
-                        isFollowed
-                          ? handleUnfollow(user.id)
-                          : handleFollow(user.id)
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isFollowed) {
+                          handleUnfollow(user.id);
+                        } else {
+                          handleFollow(user.id);
+                        }
+                      }}
                       className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
                         isFollowed
                           ? 'bg-transparent border-white/20 text-white/60 hover:border-white/40'

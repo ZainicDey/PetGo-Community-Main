@@ -46,6 +46,7 @@ export interface Thread {
   liked?: boolean;
   reposted?: boolean;
   repostedBy?: string;
+  quotedPost?: Thread;
   isOwn?: boolean;
   authorId?: number;
   isFollowed?: boolean;
@@ -149,6 +150,99 @@ function formatCount(n: number): string {
   return n.toString();
 }
 
+/* ── Quoted Post Embed ── */
+function QuotedPostEmbed({ post }: { post: Thread }) {
+  const router = useRouter();
+  const initials = post.author[0]?.toUpperCase() ?? '?';
+  const avatarBg = getAvatarColor(post.author);
+
+  return (
+    <div
+      className="mt-2 mb-2 border border-white/10 rounded-2xl overflow-hidden bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer"
+      onClick={(e) => {
+        e.stopPropagation();
+        router.push(`/community/thread/${post.id}`);
+      }}
+    >
+      <div className="px-4 pt-3 pb-1">
+        {/* Author row */}
+        <div className="flex items-center gap-2 mb-1.5">
+          {post.avatar ? (
+            <Image
+              src={post.avatar}
+              alt={post.author}
+              width={20}
+              height={20}
+              className="w-5 h-5 rounded-full object-cover"
+            />
+          ) : (
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${avatarBg}dd, ${avatarBg}88)`,
+              }}
+            >
+              {initials}
+            </div>
+          )}
+          <span className="text-[13px] font-semibold text-white">{post.author}</span>
+          <span className="text-[13px] text-white/35">{post.time}</span>
+        </div>
+
+        {/* Content */}
+        {post.content && (
+          <p className="text-[14px] font-extralight leading-relaxed text-white/85 mb-1 break-words">
+            {post.content}
+          </p>
+        )}
+      </div>
+
+      {/* Media thumbnail (first item only) */}
+      {post.media && post.media.length > 0 && (
+        <div className="px-4 pb-2">
+          {post.media[0].type === 'video' ? (
+            <video
+              src={post.media[0].url}
+              className="w-full max-h-[200px] rounded-xl object-cover"
+            />
+          ) : (
+            <Image
+              src={post.media[0].url}
+              alt="Quoted media"
+              width={480}
+              height={200}
+              unoptimized
+              className="w-full max-h-[200px] rounded-xl object-cover"
+            />
+          )}
+        </div>
+      )}
+
+      {/* Engagement counts (read-only) */}
+      <div className="flex items-center gap-4 px-4 pb-3 pt-0.5">
+        <span className="flex items-center gap-1 text-[12px] text-white/45">
+          <div className="w-3.5 h-3.5 shrink-0">
+            <HeartIcon filled={false} />
+          </div>
+          {formatCount(post.likes)}
+        </span>
+        <span className="flex items-center gap-1 text-[12px] text-white/45">
+          <div className="w-3.5 h-3.5 shrink-0">
+            <CommentIcon />
+          </div>
+          {formatCount(post.replies)}
+        </span>
+        <span className="flex items-center gap-1 text-[12px] text-white/45">
+          <div className="w-3.5 h-3.5 shrink-0">
+            <RepostIcon />
+          </div>
+          {formatCount(post.reposts)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function getAvatarColor(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++)
@@ -176,6 +270,7 @@ export default function ThreadCard({
   const [count, setCount] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showRepostMenu, setShowRepostMenu] = useState(false);
 
   useEffect(() => {
     if (!api) return;
@@ -295,7 +390,13 @@ export default function ThreadCard({
       <div className="flex gap-3">
         {/* Avatar column */}
         <div className="flex flex-col items-center gap-0 shrink-0">
-          <div className="relative flex">
+          <div className="relative flex cursor-pointer" onClick={() => {
+            if (thread.isOwn) {
+              router.push('/community/profile');
+            } else if (thread.authorId !== undefined) {
+              router.push(`/community/user/${thread.authorId}`);
+            }
+          }}>
             {thread.avatar ? (
             <Image
               src={thread.avatar}
@@ -340,7 +441,16 @@ export default function ThreadCard({
       <div className="flex-1 min-w-0">
         {/* Meta row */}
         <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-[15px] font-semibold text-white flex items-center gap-1.5">
+          <span
+            className="text-[15px] font-semibold text-white flex items-center gap-1.5 cursor-pointer hover:underline"
+            onClick={() => {
+              if (thread.isOwn) {
+                router.push('/community/profile');
+              } else if (thread.authorId !== undefined) {
+                router.push(`/community/user/${thread.authorId}`);
+              }
+            }}
+          >
             {thread.author}
             {thread.isPetProfile && (
               <span className="inline-flex items-center justify-center bg-[#d4d4d4] rounded-full w-[15px] h-[15px] relative -top-[0.5px]">
@@ -433,6 +543,11 @@ export default function ThreadCard({
         >
           {thread.content}
         </p>
+
+        {/* Quoted post embed */}
+        {thread.quotedPost && (
+          <QuotedPostEmbed post={thread.quotedPost} />
+        )}
 
         {/* Optional media */}
         {thread.media && thread.media.length > 0 ? (
@@ -547,22 +662,67 @@ export default function ThreadCard({
             </span>
           </button>
 
-          <button
-            className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${reposted ? 'text-[#00c37d] hover:bg-[#00c37d]/10' : 'text-white/50 hover:text-white/85'}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRepostToggle();
-            }}
-            aria-label={reposted ? 'Undo repost' : 'Repost'}
-            id={`thread-repost-${thread.id}`}
-          >
-            <div className="w-5 h-5 shrink-0">
-              <RepostIcon active={reposted} />
-            </div>
-            <span className="text-[13px] font-medium ml-1">
-              {formatCount(reposts)}
-            </span>
-          </button>
+          <div className="relative">
+            <button
+              className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${reposted ? 'text-[#00c37d] hover:bg-[#00c37d]/10' : 'text-white/50 hover:text-white/85'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowRepostMenu(!showRepostMenu);
+              }}
+              aria-label={reposted ? 'Undo repost' : 'Repost'}
+              id={`thread-repost-${thread.id}`}
+            >
+              <div className="w-5 h-5 shrink-0">
+                <RepostIcon active={reposted} />
+              </div>
+              <span className="text-[13px] font-medium ml-1">
+                {formatCount(reposts)}
+              </span>
+            </button>
+            {showRepostMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRepostMenu(false);
+                  }}
+                />
+                <div className="absolute left-0 bottom-full mb-1 w-36 bg-[#1c1c1c] border border-white/10 rounded-xl shadow-xl z-40 overflow-hidden flex flex-col py-1">
+                  <button
+                    className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRepostMenu(false);
+                      handleRepostToggle();
+                    }}
+                  >
+                    <div className="w-4.5 h-4.5 shrink-0">
+                      <RepostIcon />
+                    </div>
+                    {reposted ? 'Undo repost' : 'Repost'}
+                  </button>
+                  <button
+                    className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRepostMenu(false);
+                      window.dispatchEvent(
+                        new CustomEvent('community-open-quote-thread', {
+                          detail: { thread: thread.quotedPost ? thread.quotedPost : thread },
+                        })
+                      );
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" className="w-4.5 h-4.5 shrink-0">
+                      <path d="M10 11H6a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4m12-4h-4a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Quote
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           <button
             className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit ${copied ? 'text-[#00c37d]' : 'text-white/50 hover:text-white/85 hover:bg-white/5'}`}

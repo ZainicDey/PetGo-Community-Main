@@ -1,15 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
-import { PawPrint } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ThreadCard, { type Thread } from './ThreadCard';
 import ThreadFeedSkeleton from './ThreadSkeleton';
 import FollowersModal from './FollowersModal';
-import EditProfileModal from './EditProfileModal';
-import CreatePetProfileModal from './CreatePetProfileModal';
-import { useGetProfileQuery } from '@/lib/store/services/usersApi';
-import { useGetPostsQuery } from '@/lib/store/services/postsApi';
-import { useGetUserRepostsQuery } from '@/lib/store/services/usersApi';
+import {
+  useGetProfileQuery,
+  useGetUserProfileQuery,
+  useGetUserPostsQuery,
+  useGetUserRepostsQuery,
+  useFollowUserMutation,
+  useUnfollowUserMutation,
+  useGetFollowingQuery,
+} from '@/lib/store/services/usersApi';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
 
 type ProfileTab = 'posts' | 'reposts';
@@ -53,17 +57,17 @@ function mapApiPostToThread(
   else if (diffHours > 0) timeStr = `${diffHours}h`;
   else if (diffMins > 0) timeStr = `${diffMins}m`;
 
-  const isOwnPost = profile && post.author_id === profile.user_id;
+  const isOwnTargetPost = profile && post.author_id === profile.user_id;
 
-  // Use author info from API, or fallback to current profile info
+  // Use author info from API, or fallback to target profile info
   const authorName =
     post.author?.username ||
-    (isOwnPost ? profile?.username : undefined) ||
+    (isOwnTargetPost ? profile?.username : undefined) ||
     `User ${post.author_id}`;
 
   const authorAvatar =
     post.author?.profile_picture_url ||
-    (isOwnPost ? profile?.profile_picture_url : undefined);
+    (isOwnTargetPost ? profile?.profile_picture_url : undefined);
 
   return {
     id: String(post.id),
@@ -82,43 +86,84 @@ function mapApiPostToThread(
     quotedPost: post.quoted_post
       ? mapApiPostToThread(post.quoted_post, profile)
       : undefined,
-    isOwn: !!isOwnPost,
+    isOwn: false,
     authorId: post.author?.id,
     isFollowed: post.author?.is_followed,
     isPetProfile: post.author?.profile_type === 'pet',
   };
 }
 
-export default function ProfilePage() {
+interface UserProfilePageProps {
+  userId: number;
+}
+
+export default function UserProfilePage({ userId }: UserProfilePageProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [showFollowers, setShowFollowers] = useState(false);
-  const [showEditProfile, setShowEditProfile] = useState(false);
-  const [showCreatePet, setShowCreatePet] = useState(false);
 
+  /* Fetch the logged-in user's own profile to detect self-visits */
+  const { data: myProfile } = useGetProfileQuery();
+
+  /* Redirect to own profile page if viewing own user ID */
+  useEffect(() => {
+    if (myProfile && myProfile.user_id === userId) {
+      router.replace('/community/profile');
+    }
+  }, [myProfile, userId, router]);
+
+  /* Fetch target user's profile */
   const {
-    data: profile,
+    data: userProfile,
     isLoading: profileLoading,
-  } = useGetProfileQuery();
+    isError: profileError,
+  } = useGetUserProfileQuery(userId);
 
-  const { data: allPosts = [], isLoading: isPostsLoading } = useGetPostsQuery({ limit: 100, offset: 0 });
-  const { data: reposts = [], isLoading: isRepostsLoading } = useGetUserRepostsQuery(
-    profile?.user_id ?? 0,
-    { skip: !profile?.user_id },
+  /* Fetch target user's posts */
+  const { data: userPosts = [], isLoading: isPostsLoading } = useGetUserPostsQuery(userId);
+
+  /* Fetch target user's reposts */
+  const { data: reposts = [], isLoading: isRepostsLoading } = useGetUserRepostsQuery(userId);
+
+  /* Follow state management */
+  const { data: myFollowing = [] } = useGetFollowingQuery(
+    myProfile?.user_id ?? 0,
+    { skip: !myProfile?.user_id },
   );
+  const [followUser] = useFollowUserMutation();
+  const [unfollowUser] = useUnfollowUserMutation();
+  const [localFollowState, setLocalFollowState] = useState<boolean | null>(null);
 
-  /* Filter feed posts to only this user's posts */
-  const myPosts = profile
-    ? allPosts.filter((p) => p.author_id === profile.user_id)
-    : [];
+  const isCurrentlyFollowing = myFollowing.some((f) => f.id === userId);
+  const isFollowed = localFollowState ?? isCurrentlyFollowing;
 
-  const postsAsThreads = myPosts.map((p) => mapApiPostToThread(p, profile, false));
-  const repostsAsThreads = reposts.map((p) => mapApiPostToThread(p, profile, true));
+  const handleFollow = async () => {
+    setLocalFollowState(true);
+    try {
+      await followUser(userId).unwrap();
+    } catch {
+      setLocalFollowState(false);
+    }
+  };
+
+  const handleUnfollow = async () => {
+    setLocalFollowState(false);
+    try {
+      await unfollowUser(userId).unwrap();
+    } catch {
+      setLocalFollowState(true);
+    }
+  };
+
+  const postsAsThreads = userPosts.map((p) => mapApiPostToThread(p, userProfile, false));
+  const repostsAsThreads = reposts.map((p) => mapApiPostToThread(p, userProfile, true));
 
   const currentList =
     activeTab === 'posts' ? postsAsThreads : repostsAsThreads;
 
   const isListLoading = activeTab === 'posts' ? isPostsLoading : isRepostsLoading;
 
+  /* ── Loading skeleton ── */
   if (profileLoading) {
     return (
       <div className="max-w-[620px] mx-auto py-8 px-4">
@@ -154,46 +199,89 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) {
+  /* ── Error / not found ── */
+  if (profileError || !userProfile) {
     return (
       <div className="max-w-[620px] mx-auto py-16 px-4 text-center text-white/40">
-        <p className="text-lg">Profile not found</p>
-        <p className="text-sm mt-2">Please complete your profile setup first.</p>
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mx-auto mb-4 opacity-40"
+        >
+          <circle cx="12" cy="8" r="5" />
+          <path d="M20 21a8 8 0 10-16 0" />
+        </svg>
+        <p className="text-lg">User not found</p>
+        <p className="text-sm mt-2">This profile may not exist or has been removed.</p>
+        <button
+          onClick={() => router.back()}
+          className="mt-6 px-6 py-2.5 rounded-xl text-sm font-semibold border border-white/20 bg-transparent text-white hover:bg-white/5 transition-all cursor-pointer"
+        >
+          Go back
+        </button>
       </div>
     );
   }
 
-  const avatarBg = getAvatarColor(profile.username);
-  const initials = profile.username[0]?.toUpperCase() || '?';
+  const avatarBg = getAvatarColor(userProfile.username);
+  const initials = userProfile.username[0]?.toUpperCase() || '?';
 
   return (
     <>
       <div className="max-w-[620px] mx-auto py-6 px-4">
+        {/* ── Back Button ── */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors cursor-pointer bg-transparent border-none p-0 mb-4"
+          id="user-profile-back-btn"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M19 12H5" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+          Back
+        </button>
+
         {/* ── Profile Header ── */}
         <div className="border border-white/10 rounded-2xl bg-[#181818] p-5 mb-4">
           {/* Top row: name + avatar */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0 mr-4">
               <h1 className="text-2xl font-bold text-white truncate">
-                {profile.username}
+                {userProfile.username}
               </h1>
               <p className="text-sm text-white/50 mt-0.5">
-                @{profile.username}
+                @{userProfile.username}
               </p>
             </div>
             <div
               className="w-[76px] h-[76px] rounded-full overflow-hidden shrink-0 border-2 border-white/10 flex items-center justify-center"
               style={
-                !profile.profile_picture_url
+                !userProfile.profile_picture_url
                   ? { backgroundColor: avatarBg }
                   : undefined
               }
             >
-              {profile.profile_picture_url ? (
+              {userProfile.profile_picture_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={profile.profile_picture_url}
-                  alt={profile.username}
+                  src={userProfile.profile_picture_url}
+                  alt={userProfile.username}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -210,35 +298,27 @@ export default function ProfilePage() {
             className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/60 transition-colors cursor-pointer bg-transparent border-none p-0 mb-4"
           >
             <span className="font-semibold text-white/60">
-              {profile.follower_count ?? 0}
+              {userProfile.follower_count ?? 0}
             </span>
             <span>
-              {(profile.follower_count ?? 0) === 1
+              {(userProfile.follower_count ?? 0) === 1
                 ? 'follower'
                 : 'followers'}
             </span>
           </button>
 
-          {/* Edit Profile button */}
+          {/* Follow / Unfollow button */}
           <button
-            onClick={() => setShowEditProfile(true)}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-white/20 bg-transparent text-white hover:bg-white/5 active:scale-[0.98]"
-            id="profile-edit-btn"
+            onClick={() => (isFollowed ? handleUnfollow() : handleFollow())}
+            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border active:scale-[0.98] ${
+              isFollowed
+                ? 'border-white/20 bg-transparent text-white hover:bg-white/5'
+                : 'border-transparent bg-white text-black hover:bg-white/90'
+            }`}
+            id="user-profile-follow-btn"
           >
-            Edit profile
+            {isFollowed ? 'Following' : 'Follow'}
           </button>
-
-          {/* Create Pet Profile — only visible for owner (user) profiles */}
-          {profile.profile_type?.toLowerCase() !== 'pet' && (
-            <button
-              onClick={() => setShowCreatePet(true)}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-[#F7941D]/30 bg-transparent text-[#F7941D] hover:bg-[#F7941D]/5 active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
-              id="profile-create-pet-btn"
-            >
-              <PawPrint className="w-4 h-4" />
-              Create Pet Profile
-            </button>
-          )}
         </div>
 
         {/* ── Tabs ── */}
@@ -247,18 +327,19 @@ export default function ProfilePage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 text-center text-sm font-semibold transition-colors cursor-pointer bg-transparent border-none ${activeTab === tab
+              className={`flex-1 py-3 text-center text-sm font-semibold transition-colors cursor-pointer bg-transparent border-none ${
+                activeTab === tab
                   ? 'text-white'
                   : 'text-white/40 hover:text-white/60'
-                }`}
+              }`}
             >
               {tab === 'posts' ? 'Posts' : 'Reposts'}
             </button>
           ))}
           {/* Animated bottom border */}
-          <div
+          <div 
             className="absolute bottom-0 w-1/2 h-full pointer-events-none transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-            style={{
+            style={{ 
               transform: activeTab === 'posts' ? 'translateX(0%)' : 'translateX(100%)',
             }}
           >
@@ -307,18 +388,10 @@ export default function ProfilePage() {
       {/* ── Modals ── */}
       {showFollowers && (
         <FollowersModal
-          userId={profile.user_id}
-          followerCount={profile.follower_count ?? 0}
+          userId={userProfile.user_id}
+          followerCount={userProfile.follower_count ?? 0}
           onClose={() => setShowFollowers(false)}
         />
-      )}
-
-      {showEditProfile && (
-        <EditProfileModal onClose={() => setShowEditProfile(false)} />
-      )}
-
-      {showCreatePet && (
-        <CreatePetProfileModal onClose={() => setShowCreatePet(false)} />
       )}
     </>
   );

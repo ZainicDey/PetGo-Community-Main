@@ -24,6 +24,14 @@ export interface ApiPost {
   reposts_count: number;
   is_liked?: boolean;
   is_reposted?: boolean;
+  quoted_post_id?: number | null;
+  quoted_post?: ApiPost | null;
+  reposter?: {
+    id: number;
+    username: string;
+    profile_picture_url?: string;
+    is_followed?: boolean;
+  } | null;
 }
 
 export interface ApiUser {
@@ -83,7 +91,7 @@ export interface ApiComment {
   parent_id: number | null;
   content: string;
   created_at: string;
-  replies: ApiComment[];
+  replies_count: number;
 }
 
 export interface CreateCommentBody {
@@ -97,4 +105,40 @@ export interface ActivityItem {
   type: 'like' | 'repost';
   post: ApiPost;
   timestamp: string;
+}
+
+/* ── Pet Profile Switching types ── */
+
+/** A single switchable profile (owner or pet) */
+export interface SwitchableProfile {
+  user_id: number;
+  username: string;
+  profile_type: 'user' | 'pet';
+  profile_picture_url?: string;
+  is_owner: boolean;
+}
+
+/** Response from GET /users/switchable-profiles */
+export interface SwitchableProfilesResponse {
+  active_profile_id: number;
+  profiles: SwitchableProfile[];
+}
+
+/** Response from POST /users/switch-profile */
+export interface SwitchProfileResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: number;
+    username: string;
+    profile_type: string;
+  };
+}
+
+/** Body for POST /users/pet-profile */
+export interface CreatePetProfileBody {
+  username: string;
+  gender?: string;
+  date_of_birth?: string;
+  profile_picture_url?: string;
 }

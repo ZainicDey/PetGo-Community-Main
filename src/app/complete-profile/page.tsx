@@ -44,14 +44,14 @@ export default function CompleteProfilePage() {
     if (!trimmed) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsernameAvailable(null);
-       
+
       setIsCheckingUsername(false);
       return;
     }
 
-     
+
     setIsCheckingUsername(true);
-     
+
     setUsernameAvailable(null);
 
     const timer = setTimeout(async () => {
@@ -133,7 +133,7 @@ export default function CompleteProfilePage() {
       const apiError = err as { data?: { detail?: string }; status?: number };
       setError(
         apiError?.data?.detail ||
-          'Failed to create profile. Please try again.',
+        'Failed to create profile. Please try again.',
       );
     }
   };
@@ -183,11 +183,10 @@ export default function CompleteProfilePage() {
             <div className="flex flex-col items-center justify-center mb-2">
               <label htmlFor="profile-picture-upload" className="cursor-pointer group relative">
                 <div
-                  className={`w-24 h-24 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all duration-200 ${
-                    profilePictureUrl
+                  className={`w-24 h-24 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all duration-200 ${profilePictureUrl
                       ? 'border-[#F7941D]'
                       : 'border-white/10 bg-[#101010] group-hover:border-white/30'
-                  }`}
+                    }`}
                 >
                   {profilePictureUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -199,7 +198,7 @@ export default function CompleteProfilePage() {
                   ) : (
                     <User className="w-10 h-10 text-white/20 group-hover:text-white/40 transition-colors" />
                   )}
-                  
+
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
                     <Camera className="w-6 h-6 text-white" />
@@ -246,9 +245,8 @@ export default function CompleteProfilePage() {
                   }}
                   placeholder="Choose a unique username"
                   autoComplete="off"
-                  className={`w-full bg-[#101010] border rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 ${
-                    usernameAvailable === false ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/30' : 'border-white/10'
-                  }`}
+                  className={`w-full bg-[#101010] border rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 ${usernameAvailable === false ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/30' : 'border-white/10'
+                    }`}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   {isCheckingUsername && (
@@ -284,11 +282,10 @@ export default function CompleteProfilePage() {
                   id="profile-type-user"
                   type="button"
                   onClick={() => setProfileType('user')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${
-                    profileType === 'user'
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${profileType === 'user'
                       ? 'bg-[#F7941D]/15 border-[#F7941D]/50 text-[#F7941D]'
                       : 'bg-[#101010] border-white/10 text-white/50 hover:border-white/20'
-                  }`}
+                    }`}
                 >
                   🧑 User
                 </button>
@@ -296,11 +293,10 @@ export default function CompleteProfilePage() {
                   id="profile-type-pet"
                   type="button"
                   onClick={() => setProfileType('pet')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${
-                    profileType === 'pet'
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${profileType === 'pet'
                       ? 'bg-[#F7941D]/15 border-[#F7941D]/50 text-[#F7941D]'
                       : 'bg-[#101010] border-white/10 text-white/50 hover:border-white/20'
-                  }`}
+                    }`}
                 >
                   🐾 Pet
                 </button>

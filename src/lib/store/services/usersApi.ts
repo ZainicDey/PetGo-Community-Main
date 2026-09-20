@@ -6,6 +6,9 @@ import type {
   UserBasicInfo,
   FollowResponse,
   ActivityItem,
+  SwitchableProfilesResponse,
+  SwitchProfileResponse,
+  CreatePetProfileBody,
 } from '../types';
 
 interface CreateProfileBody {
@@ -97,6 +100,23 @@ export const usersApi = api.injectEndpoints({
       providesTags: [{ type: 'Follow', id: 'LIST' }],
     }),
 
+    /* ── Public profile ── */
+    getUserProfile: builder.query<ApiProfile, number>({
+      query: (userId) => `/users/${userId}/profile`,
+      providesTags: (_r, _e, userId) => [{ type: 'Profile', id: userId }],
+    }),
+
+    getUserPosts: builder.query<ApiPost[], number>({
+      query: (userId) => `/users/${userId}/posts`,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Post' as const, id })),
+              { type: 'Post', id: 'LIST' },
+            ]
+          : [{ type: 'Post', id: 'LIST' }],
+    }),
+
     /* ── User content ── */
     getUserReposts: builder.query<ApiPost[], number>({
       query: (userId) => `/users/${userId}/reposts`,
@@ -120,12 +140,37 @@ export const usersApi = api.injectEndpoints({
     searchUsers: builder.query<UserBasicInfo[], string>({
       query: (q) => `/search/users?q=${encodeURIComponent(q)}`,
     }),
+
+    /* ── Pet Profile Switching ── */
+    getSwitchableProfiles: builder.query<SwitchableProfilesResponse, void>({
+      query: () => '/users/switchable-profiles',
+      providesTags: [{ type: 'SwitchableProfiles', id: 'LIST' }],
+    }),
+
+    switchProfile: builder.mutation<SwitchProfileResponse, { target_user_id: number }>({
+      query: (body) => ({ url: '/users/switch-profile', method: 'POST', body }),
+      invalidatesTags: [
+        { type: 'User', id: 'ME' },
+        { type: 'Profile', id: 'ME' },
+        { type: 'SwitchableProfiles', id: 'LIST' },
+        { type: 'Post', id: 'LIST' },
+      ],
+    }),
+
+    createPetProfile: builder.mutation<ApiProfile, CreatePetProfileBody>({
+      query: (body) => ({ url: '/users/pet-profile', method: 'POST', body }),
+      invalidatesTags: [
+        { type: 'SwitchableProfiles', id: 'LIST' },
+      ],
+    }),
   }),
 });
 
 export const {
   useGetMeQuery,
   useGetProfileQuery,
+  useGetUserProfileQuery,
+  useGetUserPostsQuery,
   useCreateProfileMutation,
   useUpdateProfileMutation,
   useCheckUsernameMutation,
@@ -137,4 +182,7 @@ export const {
   useGetUserLikesQuery,
   useGetUserActivityQuery,
   useSearchUsersQuery,
+  useGetSwitchableProfilesQuery,
+  useSwitchProfileMutation,
+  useCreatePetProfileMutation,
 } = usersApi;

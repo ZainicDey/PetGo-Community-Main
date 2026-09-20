@@ -19,7 +19,8 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
   const allMedia = post.media?.map((m) => ({ url: m.url, type: m.media_type })) || [];
 
   // Generate a relative time string from created_at
-  const createdDate = new Date(post.created_at);
+  const dateString = post.created_at.endsWith('Z') ? post.created_at : `${post.created_at}Z`;
+  const createdDate = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - createdDate.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -54,6 +55,10 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     time: timeStr,
     liked: post.is_liked,
     reposted: post.is_reposted,
+    repostedBy: post.reposter?.username,
+    quotedPost: post.quoted_post
+      ? mapApiPostToThread(post.quoted_post, profile)
+      : undefined,
     isOwn: !!isOwnPost,
     authorId: post.author?.id,
     isFollowed: post.author?.is_followed,
@@ -86,12 +91,14 @@ export default function CommunityFeed() {
   const apiThreads: Thread[] = currentPosts?.map((p) => mapApiPostToThread(p, profile)) ?? [];
   const threads = activeTab === 'foryou' ? [...localThreads, ...apiThreads] : apiThreads;
 
-  const handleNewThread = React.useCallback(async (text: string, files: File[] = []) => {
+  const handleNewThread = React.useCallback(async (text: string, files: File[] = [], quotedPostId?: number) => {
     // Optimistic local insert for instant feedback
     const tempMedia = files.map((f) => ({
       url: URL.createObjectURL(f),
       type: f.type.startsWith('video/') ? 'video' : 'image',
     }));
+
+    const quotedThread = quotedPostId ? threads.find(t => Number(t.id) === quotedPostId) : undefined;
 
     const tempThread: Thread = {
       id: `temp-${Date.now()}`,
@@ -105,6 +112,7 @@ export default function CommunityFeed() {
       reposts: 0,
       time: 'now',
       isOwn: true,
+      quotedPost: quotedThread,
     };
     setLocalThreads((prev) => [tempThread, ...prev]);
 
@@ -115,7 +123,7 @@ export default function CommunityFeed() {
         uploadedMedia = await Promise.all(files.map(uploadMediaToCloudinary));
       }
       
-      await createPost({ content: text, media: uploadedMedia }).unwrap();
+      await createPost({ content: text, media: uploadedMedia, quoted_post_id: quotedPostId }).unwrap();
       // Remove local optimistic thread after the API response triggers a refetch
       setLocalThreads((prev) => prev.filter((t) => t.id !== tempThread.id));
       
@@ -129,9 +137,9 @@ export default function CommunityFeed() {
 
   useEffect(() => {
     const handleCustomPost = (e: Event) => {
-      const customEvent = e as CustomEvent<{ text: string; files: File[] }>;
+      const customEvent = e as CustomEvent<{ text: string; files: File[]; quoted_post_id?: number }>;
       if (customEvent.detail) {
-        handleNewThread(customEvent.detail.text, customEvent.detail.files);
+        handleNewThread(customEvent.detail.text, customEvent.detail.files, customEvent.detail.quoted_post_id);
       }
     };
     window.addEventListener('community-new-post', handleCustomPost);

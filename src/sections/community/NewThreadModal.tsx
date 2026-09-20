@@ -3,15 +3,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useGetProfileQuery } from '@/lib/store/services/usersApi';
+import type { Thread } from './ThreadCard';
 
 interface NewThreadModalProps {
   onClose: () => void;
   onPost?: (text: string, files: File[]) => void;
+  quotedThread?: Thread;
 }
 
 const MAX_CHARS = 500;
 
-export default function NewThreadModal({ onClose, onPost }: NewThreadModalProps) {
+export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThreadModalProps) {
   const [text, setText] = useState('');
   const [filesData, setFilesData] = useState<{ file: File; url: string; type: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +72,7 @@ export default function NewThreadModal({ onClose, onPost }: NewThreadModalProps)
       <div className="bg-[#1e1e1e] rounded-[20px] w-full max-w-[540px] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.6)] border border-white/10 animate-in slide-in-from-bottom-4 zoom-in-95 duration-250">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <span className="text-base font-semibold text-white">New thread</span>
+          <span className="text-base font-semibold text-white">{quotedThread ? 'Quote post' : 'New thread'}</span>
           <button
             className="bg-transparent border-none text-white/50 cursor-pointer p-1.5 rounded-full flex items-center justify-center transition-colors hover:bg-white/10 hover:text-white font-inherit"
             onClick={onClose}
@@ -136,6 +138,38 @@ export default function NewThreadModal({ onClose, onPost }: NewThreadModalProps)
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Quoted post preview */}
+            {quotedThread && (
+              <div className="mt-3 border border-white/10 rounded-2xl overflow-hidden bg-white/[0.02]">
+                <div className="px-4 pt-3 pb-2">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {quotedThread.avatar ? (
+                      <Image
+                        src={quotedThread.avatar}
+                        alt={quotedThread.author}
+                        width={20}
+                        height={20}
+                        className="w-5 h-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-[#f7941d]/70 shrink-0"
+                      >
+                        {quotedThread.author[0]?.toUpperCase() ?? '?'}
+                      </div>
+                    )}
+                    <span className="text-[13px] font-semibold text-white">{quotedThread.author}</span>
+                    <span className="text-[13px] text-white/35">{quotedThread.time}</span>
+                  </div>
+                  {quotedThread.content && (
+                    <p className="text-[14px] font-extralight leading-relaxed text-white/75 break-words line-clamp-3">
+                      {quotedThread.content}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>

@@ -14,6 +14,7 @@ import {
 } from '@/lib/store/services/postsApi';
 import {
   useGetCommentsByPostIdQuery,
+  useLazyGetCommentRepliesQuery,
   useCreateCommentMutation,
 } from '@/lib/store/services/commentsApi';
 import { useGetProfileQuery } from '@/lib/store/services/usersApi';
@@ -53,7 +54,8 @@ function formatCount(n: number): string {
 function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
   const allMedia = post.media?.map((m) => ({ url: m.url, type: m.media_type })) || [];
 
-  const createdDate = new Date(post.created_at);
+  const dateString = post.created_at.endsWith('Z') ? post.created_at : `${post.created_at}Z`;
+  const createdDate = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - createdDate.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -80,6 +82,10 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     time: timeStr,
     liked: post.is_liked,
     reposted: post.is_reposted,
+    repostedBy: post.reposter?.username,
+    quotedPost: post.quoted_post
+      ? mapApiPostToThread(post.quoted_post, profile)
+      : undefined,
     isOwn: !!isOwnPost,
     authorId: post.author?.id,
     isFollowed: post.author?.is_followed,
@@ -177,7 +183,8 @@ const PawIcon = () => (
 
 /* ── Relative time helper ── */
 function relativeTime(isoDate: string): string {
-  const created = new Date(isoDate);
+  const dateString = isoDate.endsWith('Z') ? isoDate : `${isoDate}Z`;
+  const created = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - created.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -190,23 +197,82 @@ function relativeTime(isoDate: string): string {
 }
 
 
-/* ── Single comment row (supports nested replies) ── */
+/* ── Single comment row with on-demand reply loading ── */
 function CommentItem({
   comment,
+  postId,
   index,
   depth = 0,
-  onReply,
 }: {
   comment: ApiComment;
+  postId: number;
   index: number;
   depth?: number;
-  onReply?: (parentId: number, authorName: string) => void;
 }) {
   const authorName = comment.author?.username ?? `User ${comment.author_id}`;
   const avatar = comment.author?.profile_picture_url;
   const color = getAvatarColor(authorName);
   const initials = authorName[0]?.toUpperCase() ?? '?';
   const time = relativeTime(comment.created_at);
+
+  const [showReplies, setShowReplies] = useState(false);
+  const [replies, setReplies] = useState<ApiComment[]>([]);
+  const [repliesOffset, setRepliesOffset] = useState(0);
+  const [hasMoreReplies, setHasMoreReplies] = useState(true);
+  const [localRepliesCount, setLocalRepliesCount] = useState(comment.replies_count);
+
+  // Inline reply state
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState('');
+
+  const [fetchReplies, { isFetching: isLoadingReplies }] = useLazyGetCommentRepliesQuery();
+  const [createComment] = useCreateCommentMutation();
+
+  const REPLIES_LIMIT = 10;
+
+  const handleLoadReplies = async () => {
+    try {
+      const result = await fetchReplies({
+        commentId: comment.id,
+        limit: REPLIES_LIMIT,
+        offset: repliesOffset,
+      }).unwrap();
+      setReplies((prev) => [...prev, ...result]);
+      setRepliesOffset((prev) => prev + result.length);
+      setHasMoreReplies(result.length === REPLIES_LIMIT);
+      setShowReplies(true);
+    } catch {
+      // silently fail
+    }
+  };
+
+  const handleToggleReplies = () => {
+    if (showReplies) {
+      setShowReplies(false);
+    } else if (replies.length > 0) {
+      setShowReplies(true);
+    } else {
+      handleLoadReplies();
+    }
+  };
+
+  const handlePostInlineReply = async () => {
+    if (!replyText.trim()) return;
+    try {
+      const newReply = await createComment({
+        post_id: postId,
+        parent_id: comment.id,
+        content: replyText.trim(),
+      }).unwrap();
+      setReplyText('');
+      setShowReplyInput(false);
+      setReplies((prev) => [...prev, newReply]);
+      setLocalRepliesCount((c) => c + 1);
+      setShowReplies(true);
+    } catch {
+      // Keep the text so the user can retry
+    }
+  };
 
   return (
     <div
@@ -235,13 +301,6 @@ function CommentItem({
               {initials}
             </div>
           )}
-          {authorName !== 'You' && (
-            <div className="absolute -bottom-0.5 -right-0.5 bg-[#181818] rounded-full flex items-center justify-center w-3.5 h-3.5">
-              <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 fill-white">
-                <path d="M8 2a6 6 0 100 12A6 6 0 008 2zM8 1a7 7 0 110 14A7 7 0 018 1zm3 6.5H8.5V4.5a.5.5 0 00-1 0v3H4.5a.5.5 0 000 1h3v3a.5.5 0 001 0v-3h3a.5.5 0 000-1z" fillRule="evenodd" clipRule="evenodd" />
-              </svg>
-            </div>
-          )}
         </div>
 
         {/* Body */}
@@ -262,27 +321,92 @@ function CommentItem({
           <div className="flex items-center gap-3.5 mt-0.5">
             <button
               className="flex items-center gap-1.5 bg-transparent border-none text-white/40 cursor-pointer py-0.5 px-1 rounded-md transition-all hover:text-white/70 hover:bg-white/5 font-inherit text-[12px] font-medium"
-              onClick={() => onReply?.(comment.id, authorName)}
+              onClick={() => setShowReplyInput((prev) => !prev)}
             >
               <div className="w-4 h-4 shrink-0"><CommentIcon /></div>
               <span>Reply</span>
             </button>
+
+            {/* View replies button */}
+            {localRepliesCount > 0 && (
+              <button
+                className="flex items-center gap-1.5 bg-transparent border-none text-white/40 cursor-pointer py-0.5 px-1 rounded-md transition-all hover:text-white/70 hover:bg-white/5 font-inherit text-[12px] font-medium"
+                onClick={handleToggleReplies}
+                disabled={isLoadingReplies}
+              >
+                {isLoadingReplies ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : showReplies ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                      <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Hide replies</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>View {localRepliesCount} {localRepliesCount === 1 ? 'reply' : 'replies'}</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
+
+          {/* Inline reply input */}
+          {showReplyInput && (
+            <div className="mt-2.5 flex items-center gap-2.5 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/5">
+              <input
+                type="text"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handlePostInlineReply(); }}
+                placeholder={`Reply to ${authorName}...`}
+                className="flex-1 bg-transparent border-none outline-none text-white/90 text-[13px] font-light placeholder:text-white/30 py-0.5"
+                autoFocus
+              />
+              <button
+                className="bg-transparent text-white/50 border border-white/15 rounded-full py-1 px-3 text-[12px] font-semibold cursor-pointer transition-all hover:bg-white/10 hover:text-white hover:border-white/30 disabled:opacity-30 disabled:cursor-default"
+                onClick={handlePostInlineReply}
+                disabled={!replyText.trim()}
+              >
+                Reply
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Nested replies */}
-      {comment.replies?.length > 0 && (
+      {showReplies && replies.length > 0 && (
         <div>
-          {comment.replies.map((reply, replyIdx) => (
+          {replies.map((reply, replyIdx) => (
             <CommentItem
               key={reply.id}
               comment={reply}
+              postId={postId}
               index={replyIdx}
               depth={depth + 1}
-              onReply={onReply}
             />
           ))}
+          {/* Load more replies */}
+          {hasMoreReplies && (
+            <div style={{ paddingLeft: `${20 + (depth + 1) * 28}px` }}>
+              <button
+                className="flex items-center gap-1.5 bg-transparent border-none text-white/40 cursor-pointer py-2 px-1 text-[12px] font-medium transition-all hover:text-white/70 font-inherit"
+                onClick={handleLoadReplies}
+                disabled={isLoadingReplies}
+              >
+                {isLoadingReplies ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  <span>Load more replies...</span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -295,6 +419,99 @@ function CommentItem({
 
 interface ThreadDetailPageProps {
   threadId: string;
+}
+
+/* ── Quoted Post Embed ── */
+function QuotedPostEmbed({ post }: { post: Thread }) {
+  const router = useRouter();
+  const initials = post.author[0]?.toUpperCase() ?? '?';
+  const avatarBg = getAvatarColor(post.author);
+
+  return (
+    <div
+      className="mt-2 mb-2 border border-white/10 rounded-2xl overflow-hidden bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer"
+      onClick={(e) => {
+        e.stopPropagation();
+        router.push(`/community/thread/${post.id}`);
+      }}
+    >
+      <div className="px-4 pt-3 pb-1">
+        {/* Author row */}
+        <div className="flex items-center gap-2 mb-1.5">
+          {post.avatar ? (
+            <Image
+              src={post.avatar}
+              alt={post.author}
+              width={20}
+              height={20}
+              className="w-5 h-5 rounded-full object-cover"
+            />
+          ) : (
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${avatarBg}dd, ${avatarBg}88)`,
+              }}
+            >
+              {initials}
+            </div>
+          )}
+          <span className="text-[13px] font-semibold text-white">{post.author}</span>
+          <span className="text-[13px] text-white/35">{post.time}</span>
+        </div>
+
+        {/* Content */}
+        {post.content && (
+          <p className="text-[14px] font-extralight leading-relaxed text-white/85 mb-1 break-words">
+            {post.content}
+          </p>
+        )}
+      </div>
+
+      {/* Media thumbnail (first item only) */}
+      {post.media && post.media.length > 0 && (
+        <div className="px-4 pb-2">
+          {post.media[0].type === 'video' ? (
+            <video
+              src={post.media[0].url}
+              className="w-full max-h-[200px] rounded-xl object-cover"
+            />
+          ) : (
+            <Image
+              src={post.media[0].url}
+              alt="Quoted media"
+              width={480}
+              height={200}
+              unoptimized
+              className="w-full max-h-[200px] rounded-xl object-cover"
+            />
+          )}
+        </div>
+      )}
+
+      {/* Engagement counts (read-only) */}
+      <div className="flex items-center gap-4 px-4 pb-3 pt-0.5">
+        <span className="flex items-center gap-1 text-[12px] text-white/45">
+          <div className="w-3.5 h-3.5 shrink-0">
+            <HeartIcon filled={false} />
+          </div>
+          {formatCount(post.likes)}
+        </span>
+        <span className="flex items-center gap-1 text-[12px] text-white/45">
+          <div className="w-3.5 h-3.5 shrink-0">
+            <CommentIcon />
+          </div>
+          {formatCount(post.replies)}
+        </span>
+        <span className="flex items-center gap-1 text-[12px] text-white/45">
+          <div className="w-3.5 h-3.5 shrink-0">
+            <RepostIcon />
+          </div>
+          {formatCount(post.reposts)}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
@@ -336,17 +553,18 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
     setReposts(thread?.reposts ?? 0);
   }
   const [replyText, setReplyText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<{ parentId: number | null; authorName: string } | null>(null);
   const [sortBy, setSortBy] = useState<'top' | 'newest'>('top');
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [, setApi] = useState<CarouselApi>();
 
-  // Fetch comments from the API
-  const { data: apiComments } = useGetCommentsByPostIdQuery(numericId, {
-    skip: isNaN(numericId),
-  });
+  // Fetch top-level comments from the API (paginated)
+  const { data: apiComments } = useGetCommentsByPostIdQuery(
+    { postId: numericId, limit: 20, offset: 0 },
+    { skip: isNaN(numericId) },
+  );
   const [createComment] = useCreateCommentMutation();
 
   const handleLikeToggle = () => {
@@ -380,19 +598,13 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
     try {
       await createComment({
         post_id: numericId,
-        parent_id: replyingTo?.parentId ?? null,
+        parent_id: null,
         content: replyText.trim(),
       }).unwrap();
       setReplyText('');
-      setReplyingTo(null);
     } catch {
       // Keep the text so the user can retry
     }
-  };
-
-  const handleReplyToComment = (parentId: number, authorName: string) => {
-    setReplyingTo({ parentId, authorName });
-    document.getElementById('thread-reply-input')?.focus();
   };
 
   /* Loading state */
@@ -461,16 +673,16 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               <div className="w-9 h-9 rounded-full bg-white/10 shrink-0" />
               <div className="flex-1 h-5 bg-white/5 rounded" />
               <div className="flex items-center gap-2 shrink-0">
-                 <div className="w-6 h-6 rounded bg-white/5" />
-                 <div className="w-6 h-6 rounded bg-white/5" />
-                 <div className="w-6 h-6 rounded bg-white/5" />
+                <div className="w-6 h-6 rounded bg-white/5" />
+                <div className="w-6 h-6 rounded bg-white/5" />
+                <div className="w-6 h-6 rounded bg-white/5" />
               </div>
             </div>
           </div>
 
           {/* Comments from API */}
           <div className="text-center py-10">
-             <div className="h-3 bg-white/5 rounded w-48 mx-auto" />
+            <div className="h-3 bg-white/5 rounded w-48 mx-auto" />
           </div>
         </div>
       </div>
@@ -557,7 +769,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               <span className="text-[14px] text-white/35">{thread.time}</span>
             </div>
             <div className="relative ml-auto">
-              <button 
+              <button
                 className="bg-transparent border-none text-white/35 cursor-pointer py-0.5 px-1.5 rounded-md text-lg leading-none transition-colors hover:bg-white/10 hover:text-white/70 font-inherit"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -568,16 +780,16 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               </button>
               {showMenu && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-30" 
+                  <div
+                    className="fixed inset-0 z-30"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowMenu(false);
-                    }} 
+                    }}
                   />
                   <div className="absolute right-0 top-full mt-1 w-32 bg-[#1c1c1c] border border-white/10 rounded-lg shadow-xl z-40 overflow-hidden flex flex-col py-1">
                     {thread.isOwn && (
-                      <button 
+                      <button
                         className="text-left px-4 py-2 text-sm text-[#e0245e] hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -594,7 +806,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                         Delete
                       </button>
                     )}
-                    <button 
+                    <button
                       className="text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -614,6 +826,11 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
           <p className="text-[15px] font-light leading-relaxed text-white/95 mb-3 break-words tracking-wide">
             {thread.content}
           </p>
+
+          {/* Quoted post embed */}
+          {thread.quotedPost && (
+            <QuotedPostEmbed post={thread.quotedPost} />
+          )}
 
           {/* Media */}
           {thread.media && thread.media.length > 0 ? (
@@ -668,13 +885,61 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               <span className="text-[13px] font-medium">{formatCount(thread.replies)}</span>
             </span>
 
-            <button
-              className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${reposted ? 'text-[#00c37d] hover:bg-[#00c37d]/10' : 'text-white/50 hover:text-white/85'}`}
-              onClick={handleRepostToggle}
-            >
-              <div className="w-5 h-5 shrink-0"><RepostIcon active={reposted} /></div>
-              <span className="text-[13px] font-medium">{formatCount(reposts)}</span>
-            </button>
+            <div className="relative">
+              <button
+                className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${reposted ? 'text-[#00c37d] hover:bg-[#00c37d]/10' : 'text-white/50 hover:text-white/85'}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRepostMenu(!showRepostMenu);
+                }}
+              >
+                <div className="w-5 h-5 shrink-0"><RepostIcon active={reposted} /></div>
+                <span className="text-[13px] font-medium">{formatCount(reposts)}</span>
+              </button>
+              {showRepostMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRepostMenu(false);
+                    }}
+                  />
+                  <div className="absolute left-0 bottom-full mb-1 w-36 bg-[#1c1c1c] border border-white/10 rounded-xl shadow-xl z-40 overflow-hidden flex flex-col py-1">
+                    <button
+                      className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRepostMenu(false);
+                        handleRepostToggle();
+                      }}
+                    >
+                      <div className="w-4.5 h-4.5 shrink-0">
+                        <RepostIcon />
+                      </div>
+                      {reposted ? 'Undo repost' : 'Repost'}
+                    </button>
+                    <button
+                      className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRepostMenu(false);
+                        window.dispatchEvent(
+                          new CustomEvent('community-open-quote-thread', {
+                            detail: { thread: thread.quotedPost ? thread.quotedPost : thread },
+                          })
+                        );
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" className="w-4.5 h-4.5 shrink-0">
+                        <path d="M10 11H6a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4m12-4h-4a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Quote
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
 
             <button
               className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit ${copied ? 'text-[#00c37d]' : 'text-white/50 hover:text-white/85 hover:bg-white/5'}`}
@@ -725,21 +990,8 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
           </button>
         </div>
 
-        {/* Reply input */}
+        {/* Reply input (top-level comments only) */}
         <div className="border-t border-b border-white/5">
-          {replyingTo && (
-            <div className="flex items-center justify-between px-5 pt-2.5 pb-0">
-              <span className="text-[12px] text-white/40">
-                Replying to <span className="text-[#F7941D] font-medium">{replyingTo.authorName}</span>
-              </span>
-              <button
-                className="bg-transparent border-none text-white/30 cursor-pointer text-[12px] p-0.5 rounded hover:text-white/60 transition-colors font-inherit"
-                onClick={() => setReplyingTo(null)}
-              >
-                ✕
-              </button>
-            </div>
-          )}
           <div className="flex items-center gap-3 px-5 py-3.5">
             <div className="w-9 h-9 rounded-full bg-[#2a2a2a] flex items-center justify-center shrink-0">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#666]">
@@ -752,11 +1004,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handlePostReply(); }}
-                placeholder={
-                  replyingTo
-                    ? `Reply to ${replyingTo.authorName}...`
-                    : `Reply to ${thread.author.toLowerCase().replace(/\s/g, '.')}...`
-                }
+                placeholder={`Reply to ${thread.author.toLowerCase().replace(/\s/g, '.')}...`}
                 className="w-full bg-transparent border-none outline-none text-white/90 text-[14px] font-light placeholder:text-white/30 py-1"
                 id="thread-reply-input"
               />
@@ -781,8 +1029,8 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
             <CommentItem
               key={comment.id}
               comment={comment}
+              postId={numericId}
               index={idx}
-              onReply={handleReplyToComment}
             />
           ))
         ) : (

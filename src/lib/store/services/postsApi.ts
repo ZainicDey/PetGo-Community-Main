@@ -15,6 +15,7 @@ interface GetPostsParams {
 interface CreatePostBody {
   content: string;
   media?: MediaItem[];
+  quoted_post_id?: number;
 }
 
 export const postsApi = api.injectEndpoints({

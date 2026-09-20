@@ -6,7 +6,8 @@ import { useGetMeQuery, useGetUserActivityQuery } from '@/lib/store/services/use
 import { useUnlikePostMutation, useUndoRepostMutation } from '@/lib/store/services/postsApi';
 
 function formatRelativeTime(dateString: string) {
-  const createdDate = new Date(dateString);
+  const safeDate = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
+  const createdDate = new Date(safeDate);
   const now = new Date();
   const diffMs = now.getTime() - createdDate.getTime();
   const diffMins = Math.floor(diffMs / 60000);

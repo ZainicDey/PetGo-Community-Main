@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   useSearchUsersQuery,
   useFollowUserMutation,
@@ -10,6 +11,7 @@ import {
 } from '@/lib/store/services/usersApi';
 
 export default function SearchPage() {
+  const router = useRouter();
   const { data: profile } = useGetProfileQuery();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -117,7 +119,14 @@ export default function SearchPage() {
             return (
               <div
                 key={user.id}
-                className="flex items-center gap-4 px-2 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors rounded-xl"
+                className="flex items-center gap-4 px-2 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors rounded-xl cursor-pointer"
+                onClick={() => {
+                  if (user.id === profile?.user_id) {
+                    router.push('/community/profile');
+                  } else {
+                    router.push(`/community/user/${user.id}`);
+                  }
+                }}
               >
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
@@ -148,9 +157,14 @@ export default function SearchPage() {
                 {/* Follow Button */}
                 {user.id !== profile?.user_id && (
                   <button
-                    onClick={() =>
-                      isFollowed ? handleUnfollow(user.id) : handleFollow(user.id)
-                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isFollowed) {
+                        handleUnfollow(user.id);
+                      } else {
+                        handleFollow(user.id);
+                      }
+                    }}
                     className={`px-6 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer border ${
                       isFollowed
                         ? 'bg-transparent border-white/20 text-white/60 hover:border-white/40'

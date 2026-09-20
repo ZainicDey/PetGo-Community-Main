@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import PetGoLogo from '@/assets/images/Logo_PetGo.png';
 import NewThreadModal from './NewThreadModal';
+import type { Thread } from './ThreadCard';
+import ProfileSwitcher from './ProfileSwitcher';
 import { useGetMeQuery } from '@/lib/store/services/usersApi';
 
 /* ── SVG Icons ── */
@@ -142,6 +144,7 @@ const ActivityFilledIcon = () => (
   </svg>
 );
 
+/* 
 const ProfileOutlineIcon = () => (
   <svg
     aria-label="Profile"
@@ -183,6 +186,7 @@ const ProfileFilledIcon = () => (
     />
   </svg>
 );
+*/
 
 const navItems = [
   {
@@ -213,13 +217,13 @@ const navItems = [
     OutlineIcon: ActivityOutlineIcon,
     FilledIcon: ActivityFilledIcon,
   },
-  {
+  /* {
     id: 'profile',
     label: 'Profile',
     href: '/community/profile',
     OutlineIcon: ProfileOutlineIcon,
     FilledIcon: ProfileFilledIcon,
-  },
+  }, */
 ];
 
 interface CommunityLayoutProps {
@@ -231,6 +235,7 @@ const navBtnBaseClass =
 
 export default function CommunityLayout({ children }: CommunityLayoutProps) {
   const [showNewThread, setShowNewThread] = useState(false);
+  const [quoteThread, setQuoteThread] = useState<Thread | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const { data: me } = useGetMeQuery();
@@ -246,8 +251,19 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
 
   React.useEffect(() => {
     const handleOpenModal = () => setShowNewThread(true);
+    const handleOpenQuote = (e: Event) => {
+      const detail = (e as CustomEvent<{ thread: Thread }>).detail;
+      if (detail?.thread) {
+        setQuoteThread(detail.thread);
+        setShowNewThread(true);
+      }
+    };
     window.addEventListener('community-open-new-thread', handleOpenModal);
-    return () => window.removeEventListener('community-open-new-thread', handleOpenModal);
+    window.addEventListener('community-open-quote-thread', handleOpenQuote);
+    return () => {
+      window.removeEventListener('community-open-new-thread', handleOpenModal);
+      window.removeEventListener('community-open-quote-thread', handleOpenQuote);
+    };
   }, []);
 
   return (
@@ -380,8 +396,16 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 </button>
               );
             })}
+
+            {/* Mobile Profile Switcher in the nav row */}
+            <div className="contents sm:hidden">
+              <ProfileSwitcher isMobile />
+            </div>
           </div>
         </nav>
+
+        {/* ── Profile Switcher (bottom of sidebar) ── */}
+        <ProfileSwitcher />
       </aside>
 
       {/* ── Main Content ── */}
@@ -394,11 +418,22 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
 
       {/* ── New Thread Modal ── */}
       {showNewThread && (
-        <NewThreadModal 
-          onClose={() => setShowNewThread(false)} 
-          onPost={(text, files) => {
-            window.dispatchEvent(new CustomEvent('community-new-post', { detail: { text, files } }));
+        <NewThreadModal
+          onClose={() => {
+            setShowNewThread(false);
+            setQuoteThread(null);
           }}
+          onPost={(text, files) => {
+            window.dispatchEvent(new CustomEvent('community-new-post', {
+              detail: {
+                text,
+                files,
+                quoted_post_id: quoteThread ? Number(quoteThread.id) : undefined,
+              },
+            }));
+            setQuoteThread(null);
+          }}
+          quotedThread={quoteThread ?? undefined}
         />
       )}
     </div>
