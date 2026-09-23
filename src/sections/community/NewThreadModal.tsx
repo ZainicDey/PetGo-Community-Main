@@ -31,7 +31,7 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
   }, [filesData]);
 
   const handlePost = async () => {
-    if (!text.trim() && filesData.length === 0) return;
+    if (!text.trim() && filesData.length === 0 && !quotedThread) return;
     onPost?.(text.trim(), filesData.map(f => f.file));
     onClose();
   };
@@ -97,15 +97,17 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
           <div className="flex-1 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-white">{username}</span>
-              <button
-                className="bg-transparent border-none cursor-pointer text-white/50 hover:text-white transition-colors p-1"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Add media"
-              >
-                <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 121.86 122.88" className="w-5 h-5 fill-current" xmlSpace="preserve">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M72.09,18.72h42.37c2.05,0,3.89,0.84,5.22,2.18c1.34,1.34,2.18,3.2,2.18,5.22v89.36 c0,2.05-0.84,3.89-2.18,5.22c-1.34,1.34-3.2,2.18-5.22,2.18H24.48c-2.05,0-3.89-0.84-5.22-2.18c-1.34-1.34-2.18-3.2-2.18-5.22 V71.46c2.47,1,5.05,1.78,7.72,2.29v20.28h0.03l0,0C37.72,81.7,46.26,75.61,59.08,65.2c0.05,0.05,0.1,0.1,0.15,0.15 c0.03,0.03,0.03,0.06,0.06,0.06l26.82,31.73l4.1-25.24c0.28-1.62,1.8-2.73,3.42-2.45c0.62,0.09,1.18,0.4,1.62,0.81l18.82,19.77 V27.91c0-0.4-0.16-0.75-0.44-0.99c-0.25-0.25-0.62-0.44-0.99-0.44H74.05C73.64,23.8,72.98,21.21,72.09,18.72L72.09,18.72z M32.79,0 C50.9,0,65.58,14.68,65.58,32.79c0,18.11-14.68,32.79-32.79,32.79C14.68,65.58,0,50.9,0,32.79C0,14.68,14.68,0,32.79,0L32.79,0z M15.37,33.37h11.04v15.76h12.45V33.37h11.36L32.8,16.44L15.37,33.37L15.37,33.37L15.37,33.37z M94.27,35.66 c2.95,0,5.66,1.21,7.58,3.14c1.96,1.96,3.14,4.63,3.14,7.59c0,2.95-1.21,5.66-3.14,7.58c-1.96,1.96-4.63,3.14-7.58,3.14 c-2.95,0-5.66-1.21-7.59-3.14c-1.96-1.96-3.14-4.63-3.14-7.58c0-2.95,1.21-5.65,3.14-7.59C88.65,36.84,91.32,35.66,94.27,35.66 L94.27,35.66L94.27,35.66z"/>
-                </svg>
-              </button>
+              {!quotedThread && (
+                <button
+                  className="bg-transparent border-none cursor-pointer text-white/50 hover:text-white transition-colors p-1"
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Add media"
+                >
+                  <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 121.86 122.88" className="w-5 h-5 fill-current" xmlSpace="preserve">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M72.09,18.72h42.37c2.05,0,3.89,0.84,5.22,2.18c1.34,1.34,2.18,3.2,2.18,5.22v89.36 c0,2.05-0.84,3.89-2.18,5.22c-1.34,1.34-3.2,2.18-5.22,2.18H24.48c-2.05,0-3.89-0.84-5.22-2.18c-1.34-1.34-2.18-3.2-2.18-5.22 V71.46c2.47,1,5.05,1.78,7.72,2.29v20.28h0.03l0,0C37.72,81.7,46.26,75.61,59.08,65.2c0.05,0.05,0.1,0.1,0.15,0.15 c0.03,0.03,0.03,0.06,0.06,0.06l26.82,31.73l4.1-25.24c0.28-1.62,1.8-2.73,3.42-2.45c0.62,0.09,1.18,0.4,1.62,0.81l18.82,19.77 V27.91c0-0.4-0.16-0.75-0.44-0.99c-0.25-0.25-0.62-0.44-0.99-0.44H74.05C73.64,23.8,72.98,21.21,72.09,18.72L72.09,18.72z M32.79,0 C50.9,0,65.58,14.68,65.58,32.79c0,18.11-14.68,32.79-32.79,32.79C14.68,65.58,0,50.9,0,32.79C0,14.68,14.68,0,32.79,0L32.79,0z M15.37,33.37h11.04v15.76h12.45V33.37h11.36L32.8,16.44L15.37,33.37L15.37,33.37L15.37,33.37z M94.27,35.66 c2.95,0,5.66,1.21,7.58,3.14c1.96,1.96,3.14,4.63,3.14,7.59c0,2.95-1.21,5.66-3.14,7.58c-1.96,1.96-4.63,3.14-7.58,3.14 c-2.95,0-5.66-1.21-7.59-3.14c-1.96-1.96-3.14-4.63-3.14-7.58c0-2.95,1.21-5.65,3.14-7.59C88.65,36.84,91.32,35.66,94.27,35.66 L94.27,35.66L94.27,35.66z"/>
+                  </svg>
+                </button>
+              )}
             </div>
             <textarea
               id="community-new-thread-textarea"
@@ -170,6 +172,25 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
                     </p>
                   )}
                 </div>
+                {quotedThread.media && quotedThread.media.length > 0 && (
+                  <div className="px-4 pb-3 pt-1">
+                    {quotedThread.media[0].type === 'video' ? (
+                      <video
+                        src={quotedThread.media[0].url}
+                        className="w-full max-h-[380px] rounded-xl object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={quotedThread.media[0].url}
+                        alt="Quoted media"
+                        width={680}
+                        height={380}
+                        unoptimized
+                        className="w-full max-h-[380px] rounded-xl object-cover"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -194,9 +215,9 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
             id="community-post-thread-btn"
             className="bg-white text-black border-none rounded-full py-2.5 px-5.5 text-sm font-bold cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:opacity-85 hover:not-disabled:scale-[1.02] font-inherit"
             onClick={handlePost}
-            disabled={!text.trim() && filesData.length === 0}
+            disabled={!text.trim() && filesData.length === 0 && !quotedThread}
           >
-            Post
+            {quotedThread && !text.trim() ? 'Repost' : 'Post'}
           </button>
         </div>
       </div>

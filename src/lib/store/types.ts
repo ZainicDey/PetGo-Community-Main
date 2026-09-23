@@ -14,7 +14,9 @@ export interface ApiPost {
     username: string;
     profile_picture_url?: string;
     is_followed?: boolean;
+    follower_count?: number;
     profile_type?: string;
+    pet_type?: string;
   };
   content: string;
   media: MediaItem[];
@@ -24,6 +26,7 @@ export interface ApiPost {
   reposts_count: number;
   is_liked?: boolean;
   is_reposted?: boolean;
+  is_saved?: boolean;
   quoted_post_id?: number | null;
   quoted_post?: ApiPost | null;
   reposter?: {
@@ -46,6 +49,7 @@ export interface ApiProfile {
   user_id: number;
   profile_type: string;
   gender?: string;
+  pet_type?: string;
   date_of_birth?: string;
   username: string;
   profile_picture_url?: string;
@@ -59,6 +63,13 @@ export interface UserBasicInfo {
 }
 
 export interface LikeResponse {
+  id: number;
+  post_id: number;
+  user_id: number;
+  created_at: string;
+}
+
+export interface SaveResponse {
   id: number;
   post_id: number;
   user_id: number;
@@ -87,9 +98,14 @@ export interface ApiComment {
     id: number;
     username: string;
     profile_picture_url?: string;
+    is_followed?: boolean;
+    follower_count?: number;
   };
   parent_id: number | null;
   content: string;
+  image_url: string | null;
+  is_edited: boolean;
+  is_deleted: boolean;
   created_at: string;
   replies_count: number;
 }
@@ -98,6 +114,12 @@ export interface CreateCommentBody {
   post_id: number;
   parent_id?: number | null;
   content: string;
+  image_url?: string | null;
+}
+
+export interface UpdateCommentBody {
+  content: string;
+  image_url?: string | null;
 }
 
 export interface ActivityItem {
@@ -139,6 +161,7 @@ export interface SwitchProfileResponse {
 export interface CreatePetProfileBody {
   username: string;
   gender?: string;
+  pet_type?: string;
   date_of_birth?: string;
   profile_picture_url?: string;
 }

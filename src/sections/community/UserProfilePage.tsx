@@ -82,14 +82,17 @@ function mapApiPostToThread(
     time: timeStr,
     liked: post.is_liked,
     reposted: isRepost ? true : post.is_reposted,
-    repostedBy: isRepost && profile ? profile.username : undefined,
+    isSaved: post.is_saved,
+    repostedBy: isRepost && profile ? profile.username : post.reposter?.username,
     quotedPost: post.quoted_post
       ? mapApiPostToThread(post.quoted_post, profile)
       : undefined,
     isOwn: false,
-    authorId: post.author?.id,
+    authorId: post.author?.id ?? profile?.user_id,
     isFollowed: post.author?.is_followed,
-    isPetProfile: post.author?.profile_type === 'pet',
+    followerCount: post.author?.follower_count,
+    isPetProfile: post.author?.profile_type === 'pet' || profile?.profile_type === 'pet',
+    petType: post.author?.pet_type || profile?.pet_type,
   };
 }
 

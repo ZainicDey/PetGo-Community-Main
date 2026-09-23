@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Camera, PawPrint } from 'lucide-react';
+import { Camera, PawPrint, ChevronDown } from 'lucide-react';
 import {
   useCreatePetProfileMutation,
   useCheckUsernameMutation,
@@ -18,7 +18,11 @@ export default function CreatePetProfileModal({
   const [checkUsername] = useCheckUsernameMutation();
 
   const [username, setUsername] = useState('');
+  const [petType, setPetType] = useState('dog');
+  const [isPetTypeOpen, setIsPetTypeOpen] = useState(false);
+  const [customPetType, setCustomPetType] = useState('');
   const [gender, setGender] = useState('');
+  const [isGenderOpen, setIsGenderOpen] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [profilePictureUrl, setProfilePictureUrl] = useState('');
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -110,9 +114,12 @@ export default function CreatePetProfileModal({
       setIsUploading(false);
     }
 
+    const finalPetType = petType === 'other' ? customPetType.trim() : petType;
+
     try {
       await createPetProfile({
         username: trimmedUsername,
+        pet_type: finalPetType || undefined,
         gender: gender || undefined,
         date_of_birth: dateOfBirth || undefined,
         profile_picture_url: finalAvatarUrl || undefined,
@@ -312,6 +319,69 @@ export default function CreatePetProfileModal({
                 )}
             </div>
 
+            {/* Pet Type */}
+            <div>
+              <label
+                htmlFor="pet-profile-type"
+                className="block text-sm text-white/60 mb-1.5 font-medium"
+              >
+                Pet Type
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsPetTypeOpen(!isPetTypeOpen)}
+                  className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 flex items-center justify-between"
+                >
+                  <span className="capitalize">{petType}</span>
+                  <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isPetTypeOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isPetTypeOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsPetTypeOpen(false)} />
+                    <div className="absolute top-full left-0 w-full mt-2 bg-[#181818] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 py-1">
+                      {['dog', 'cat', 'fish', 'other'].map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            setPetType(type);
+                            setIsPetTypeOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5 capitalize ${
+                            petType === type ? 'text-[#F7941D] bg-[#F7941D]/10' : 'text-white/80'
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Custom Pet Type (if Other) */}
+            {petType === 'other' && (
+              <div>
+                <label
+                  htmlFor="pet-profile-custom-type"
+                  className="block text-sm text-white/60 mb-1.5 font-medium"
+                >
+                  Specify Pet Type
+                </label>
+                <input
+                  id="pet-profile-custom-type"
+                  type="text"
+                  value={customPetType}
+                  onChange={(e) => setCustomPetType(e.target.value)}
+                  placeholder="e.g. Rabbit, Bird, Reptile"
+                  className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30"
+                />
+              </div>
+            )}
+
             {/* Gender */}
             <div>
               <label
@@ -321,16 +391,44 @@ export default function CreatePetProfileModal({
                 Gender{' '}
                 <span className="text-white/25 font-normal">(optional)</span>
               </label>
-              <select
-                id="pet-profile-gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 appearance-none cursor-pointer"
-              >
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsGenderOpen(!isGenderOpen)}
+                  className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 flex items-center justify-between"
+                >
+                  <span className="capitalize">{gender === '' ? 'Prefer not to say' : gender}</span>
+                  <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isGenderOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isGenderOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsGenderOpen(false)} />
+                    <div className="absolute top-full left-0 w-full mt-2 bg-[#181818] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 py-1">
+                      {[
+                        { value: '', label: 'Prefer not to say' },
+                        { value: 'male', label: 'Male' },
+                        { value: 'female', label: 'Female' },
+                        { value: 'other', label: 'Other' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setGender(opt.value);
+                            setIsGenderOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5 ${
+                            gender === opt.value ? 'text-[#F7941D] bg-[#F7941D]/10' : 'text-white/80'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Date of Birth */}

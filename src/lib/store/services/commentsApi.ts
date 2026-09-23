@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { ApiComment, CreateCommentBody } from '../types';
+import type { ApiComment, CreateCommentBody, UpdateCommentBody } from '../types';
 
 export const commentsApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -37,10 +37,41 @@ export const commentsApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, arg) => [
         { type: 'Comment', id: `POST-${arg.post_id}` },
         { type: 'Post', id: arg.post_id },
-        // Also invalidate parent's replies cache if this is a nested reply
         ...(arg.parent_id
           ? [{ type: 'Comment' as const, id: `REPLIES-${arg.parent_id}` }]
           : []),
+      ],
+    }),
+
+    /* ── Update a comment ── */
+    updateComment: builder.mutation<
+      ApiComment,
+      { commentId: number; body: UpdateCommentBody }
+    >({
+      query: ({ commentId, body }) => ({
+        url: `/comments/${commentId}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (result) => result ? [
+        { type: 'Comment', id: `POST-${result.post_id}` },
+        ...(result.parent_id ? [{ type: 'Comment' as const, id: `REPLIES-${result.parent_id}` }] : [])
+      ] : [],
+    }),
+
+    /* ── Delete a comment ── */
+    deleteComment: builder.mutation<
+      void,
+      { commentId: number; postId: number; parentId: number | null }
+    >({
+      query: ({ commentId }) => ({
+        url: `/comments/${commentId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_r, _e, arg) => [
+        { type: 'Comment', id: `POST-${arg.postId}` },
+        { type: 'Post', id: arg.postId },
+        ...(arg.parentId ? [{ type: 'Comment' as const, id: `REPLIES-${arg.parentId}` }] : [])
       ],
     }),
   }),
@@ -51,4 +82,6 @@ export const {
   useGetCommentRepliesQuery,
   useLazyGetCommentRepliesQuery,
   useCreateCommentMutation,
+  useUpdateCommentMutation,
+  useDeleteCommentMutation,
 } = commentsApi;

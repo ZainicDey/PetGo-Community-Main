@@ -4,6 +4,7 @@ import type {
   MediaItem,
   LikeResponse,
   RepostResponse,
+  SaveResponse,
   UserBasicInfo,
 } from '../types';
 
@@ -126,6 +127,23 @@ export const postsApi = api.injectEndpoints({
     getPostReposters: builder.query<UserBasicInfo[], number>({
       query: (postId) => `/posts/${postId}/reposters`,
     }),
+
+    /* ── Saves ── */
+    savePost: builder.mutation<SaveResponse, number>({
+      query: (postId) => ({ url: `/posts/${postId}/save`, method: 'POST' }),
+      invalidatesTags: (_r, _e, postId) => [
+        { type: 'Post', id: postId },
+        { type: 'Post', id: 'LIST' },
+      ],
+    }),
+
+    unsavePost: builder.mutation<void, number>({
+      query: (postId) => ({ url: `/posts/${postId}/save`, method: 'DELETE' }),
+      invalidatesTags: (_r, _e, postId) => [
+        { type: 'Post', id: postId },
+        { type: 'Post', id: 'LIST' },
+      ],
+    }),
   }),
 });
 
@@ -140,4 +158,6 @@ export const {
   useRepostMutation,
   useUndoRepostMutation,
   useGetPostRepostersQuery,
+  useSavePostMutation,
+  useUnsavePostMutation,
 } = postsApi;

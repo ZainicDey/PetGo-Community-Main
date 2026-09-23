@@ -17,10 +17,8 @@ import {
   useUndoRepostMutation,
   useDeletePostMutation,
 } from '@/lib/store/services/postsApi';
-import {
-  useFollowUserMutation,
-  useUnfollowUserMutation,
-} from '@/lib/store/services/usersApi';
+import { useSavePostMutation, useUnsavePostMutation } from '@/lib/store/services/postsApi';
+import FollowBadge from './FollowBadge';
 
 const AVATAR_COLORS = [
   '#f7941d',
@@ -50,7 +48,10 @@ export interface Thread {
   isOwn?: boolean;
   authorId?: number;
   isFollowed?: boolean;
+  followerCount?: number;
+  isSaved?: boolean;
   isPetProfile?: boolean;
+  petType?: string;
 }
 
 interface ThreadCardProps {
@@ -145,6 +146,20 @@ const PawIcon = () => (
   </svg>
 );
 
+const FishIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="black"
+    style={{ width: 11, height: 11, display: 'inline-block' }}
+    aria-label="Fish profile"
+  >
+    <path d="M21.5 12C21.5 12 18 16 12 16C6 16 2.5 19 2.5 19V5C2.5 5 6 8 12 8C18 8 21.5 12 21.5 12Z" />
+    <circle cx="16" cy="10.5" r="1.5" fill="white" />
+    <path d="M11 8L10 3L14 6.5L11 8Z" />
+    <path d="M11 16L10 21L14 17.5L11 16Z" />
+  </svg>
+);
+
 function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return n.toString();
@@ -167,24 +182,39 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
       <div className="px-4 pt-3 pb-1">
         {/* Author row */}
         <div className="flex items-center gap-2 mb-1.5">
-          {post.avatar ? (
-            <Image
-              src={post.avatar}
-              alt={post.author}
-              width={20}
-              height={20}
-              className="w-5 h-5 rounded-full object-cover"
-            />
-          ) : (
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-              style={{
-                background: `linear-gradient(135deg, ${avatarBg}dd, ${avatarBg}88)`,
-              }}
-            >
-              {initials}
-            </div>
-          )}
+          <div className="relative shrink-0 flex">
+            {post.avatar ? (
+              <Image
+                src={post.avatar}
+                alt={post.author}
+                width={20}
+                height={20}
+                className="w-5 h-5 rounded-full object-cover"
+              />
+            ) : (
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${avatarBg}dd, ${avatarBg}88)`,
+                }}
+              >
+                {initials}
+              </div>
+            )}
+            {!post.isOwn && post.authorId && (
+              <div className="absolute -bottom-1 -right-1 scale-75 transform origin-bottom-right">
+                <FollowBadge
+                  authorId={post.authorId}
+                  authorName={post.author}
+                  authorAvatar={post.avatar}
+                  isFollowed={post.isFollowed}
+                  isOwn={post.isOwn}
+                  followerCount={post.followerCount}
+                  ringColor="transparent"
+                />
+              </div>
+            )}
+          </div>
           <span className="text-[13px] font-semibold text-white">{post.author}</span>
           <span className="text-[13px] text-white/35">{post.time}</span>
         </div>
@@ -203,16 +233,16 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
           {post.media[0].type === 'video' ? (
             <video
               src={post.media[0].url}
-              className="w-full max-h-[200px] rounded-xl object-cover"
+              className="w-full max-h-[380px] rounded-xl object-cover"
             />
           ) : (
             <Image
               src={post.media[0].url}
               alt="Quoted media"
-              width={480}
-              height={200}
+              width={680}
+              height={380}
               unoptimized
-              className="w-full max-h-[200px] rounded-xl object-cover"
+              className="w-full max-h-[380px] rounded-xl object-cover"
             />
           )}
         </div>
@@ -270,7 +300,6 @@ export default function ThreadCard({
   const [count, setCount] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showRepostMenu, setShowRepostMenu] = useState(false);
 
   useEffect(() => {
     if (!api) return;
@@ -302,10 +331,10 @@ export default function ThreadCard({
   const [reposted, setReposted] = useState(thread.reposted ?? false);
   const [reposts, setReposts] = useState(thread.reposts);
   const [isDeleted, setIsDeleted] = useState(false);
-  const [isFollowed, setIsFollowed] = useState(thread.isFollowed ?? false);
+  const [isSaved, setIsSaved] = useState(thread.isSaved ?? false);
   
-  const [followUser] = useFollowUserMutation();
-  const [unfollowUser] = useUnfollowUserMutation();
+  const [savePost] = useSavePostMutation();
+  const [unsavePost] = useUnsavePostMutation();
 
   if (isDeleted) return null;
 
@@ -314,14 +343,14 @@ export default function ThreadCard({
     prevThread.likes !== thread.likes ||
     prevThread.reposted !== thread.reposted ||
     prevThread.reposts !== thread.reposts ||
-    prevThread.isFollowed !== thread.isFollowed
+    prevThread.isSaved !== thread.isSaved
   ) {
     setPrevThread(thread);
     setLiked(thread.liked ?? false);
     setLikes(thread.likes);
     setReposted(thread.reposted ?? false);
     setReposts(thread.reposts);
-    setIsFollowed(thread.isFollowed ?? false);
+    setIsSaved(thread.isSaved ?? false);
   }
 
   const handleLike = () => {
@@ -416,20 +445,15 @@ export default function ThreadCard({
               {initials}
             </div>
           )}
-          {thread.author !== 'You' && (
-            <div className="absolute -bottom-1 -right-1 bg-[#101010] rounded-full flex items-center justify-center w-4 h-4">
-              <svg
-                viewBox="0 0 16 16"
-                fill="currentColor"
-                className="w-3.5 h-3.5 fill-white"
-              >
-                <path
-                  d="M8 2a6 6 0 100 12A6 6 0 008 2zM8 1a7 7 0 110 14A7 7 0 018 1zm3 6.5H8.5V4.5a.5.5 0 00-1 0v3H4.5a.5.5 0 000 1h3v3a.5.5 0 001 0v-3h3a.5.5 0 000-1z"
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
+          {!thread.isOwn && (
+            <FollowBadge
+              authorId={thread.authorId}
+              authorName={thread.author}
+              authorAvatar={thread.avatar}
+              isFollowed={thread.isFollowed}
+              isOwn={thread.isOwn}
+              followerCount={thread.followerCount}
+            />
           )}
         </div>
         {showLine && (
@@ -454,7 +478,7 @@ export default function ThreadCard({
             {thread.author}
             {thread.isPetProfile && (
               <span className="inline-flex items-center justify-center bg-[#d4d4d4] rounded-full w-[15px] h-[15px] relative -top-[0.5px]">
-                <PawIcon />
+                {thread.petType?.toLowerCase() === 'fish' ? <FishIcon /> : <PawIcon />}
               </span>
             )}
           </span>
@@ -498,28 +522,29 @@ export default function ThreadCard({
                       Delete
                     </button>
                   )}
-                  {!thread.isOwn && thread.authorId !== undefined && (
-                    <button 
-                      className="text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        setShowMenu(false);
-                        try {
-                          if (isFollowed) {
-                            await unfollowUser(thread.authorId!).unwrap();
-                            setIsFollowed(false);
-                          } else {
-                            await followUser(thread.authorId!).unwrap();
-                            setIsFollowed(true);
-                          }
-                        } catch (err) {
-                          console.error("Failed to follow/unfollow", err);
+                  <button 
+                    className="text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      const numericId = Number(thread.id);
+                      if (isNaN(numericId)) return;
+                      try {
+                        if (isSaved) {
+                          setIsSaved(false);
+                          await unsavePost(numericId).unwrap();
+                        } else {
+                          setIsSaved(true);
+                          await savePost(numericId).unwrap();
                         }
-                      }}
-                    >
-                      {isFollowed ? 'Unfollow' : 'Follow'}
-                    </button>
-                  )}
+                      } catch (err) {
+                        setIsSaved(!isSaved); // revert on error
+                        console.error("Failed to save/unsave post", err);
+                      }
+                    }}
+                  >
+                    {isSaved ? 'Unsave post' : 'Save post'}
+                  </button>
                   <button 
                     className="text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
                     onClick={(e) => {
@@ -667,7 +692,15 @@ export default function ThreadCard({
               className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${reposted ? 'text-[#00c37d] hover:bg-[#00c37d]/10' : 'text-white/50 hover:text-white/85'}`}
               onClick={(e) => {
                 e.stopPropagation();
-                setShowRepostMenu(!showRepostMenu);
+                if (reposted) {
+                  handleRepostToggle();
+                } else {
+                  window.dispatchEvent(
+                    new CustomEvent('community-open-quote-thread', {
+                      detail: { thread: thread.quotedPost ? thread.quotedPost : thread },
+                    })
+                  );
+                }
               }}
               aria-label={reposted ? 'Undo repost' : 'Repost'}
               id={`thread-repost-${thread.id}`}
@@ -679,49 +712,6 @@ export default function ThreadCard({
                 {formatCount(reposts)}
               </span>
             </button>
-            {showRepostMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-30"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowRepostMenu(false);
-                  }}
-                />
-                <div className="absolute left-0 bottom-full mb-1 w-36 bg-[#1c1c1c] border border-white/10 rounded-xl shadow-xl z-40 overflow-hidden flex flex-col py-1">
-                  <button
-                    className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowRepostMenu(false);
-                      handleRepostToggle();
-                    }}
-                  >
-                    <div className="w-4.5 h-4.5 shrink-0">
-                      <RepostIcon />
-                    </div>
-                    {reposted ? 'Undo repost' : 'Repost'}
-                  </button>
-                  <button
-                    className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowRepostMenu(false);
-                      window.dispatchEvent(
-                        new CustomEvent('community-open-quote-thread', {
-                          detail: { thread: thread.quotedPost ? thread.quotedPost : thread },
-                        })
-                      );
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" className="w-4.5 h-4.5 shrink-0">
-                      <path d="M10 11H6a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4m12-4h-4a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Quote
-                  </button>
-                </div>
-              </>
-            )}
           </div>
 
           <button
@@ -780,7 +770,7 @@ export default function ThreadCard({
               src={selectedMedia.url}
               controls
               autoPlay
-              className="max-w-[95vw] max-h-[95vh] w-auto h-auto object-contain cursor-default"
+              className="max-w-[95vw] max-h-[95vh] w-full h-full object-contain cursor-default"
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
@@ -790,7 +780,7 @@ export default function ThreadCard({
               width={1200}
               height={800}
               unoptimized
-              className="max-w-[95vw] max-h-[95vh] w-auto h-auto object-contain cursor-default"
+              className="max-w-[95vw] max-h-[95vh] w-full h-full object-contain cursor-default"
               onClick={(e) => e.stopPropagation()}
             />
           )}

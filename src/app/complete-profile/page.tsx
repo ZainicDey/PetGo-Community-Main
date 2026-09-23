@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Camera, User } from 'lucide-react';
+import { Camera, User, ChevronDown } from 'lucide-react';
 import PetGoLogo from '@/assets/images/Logo_PetGo.png';
 import {
   useCreateProfileMutation,
@@ -27,6 +27,7 @@ export default function CompleteProfilePage() {
   const [username, setUsername] = useState('');
   const [profileType, setProfileType] = useState<ProfileType>('user');
   const [gender, setGender] = useState('');
+  const [isGenderOpen, setIsGenderOpen] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [profilePictureUrl, setProfilePictureUrl] = useState('');
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -272,37 +273,6 @@ export default function CompleteProfilePage() {
               )}
             </div>
 
-            {/* Profile Type */}
-            <div>
-              <label className="block text-sm text-white/60 mb-2 font-medium">
-                Profile Type <span className="text-[#F7941D]">*</span>
-              </label>
-              <div className="flex gap-3">
-                <button
-                  id="profile-type-user"
-                  type="button"
-                  onClick={() => setProfileType('user')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${profileType === 'user'
-                      ? 'bg-[#F7941D]/15 border-[#F7941D]/50 text-[#F7941D]'
-                      : 'bg-[#101010] border-white/10 text-white/50 hover:border-white/20'
-                    }`}
-                >
-                  🧑 User
-                </button>
-                <button
-                  id="profile-type-pet"
-                  type="button"
-                  onClick={() => setProfileType('pet')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${profileType === 'pet'
-                      ? 'bg-[#F7941D]/15 border-[#F7941D]/50 text-[#F7941D]'
-                      : 'bg-[#101010] border-white/10 text-white/50 hover:border-white/20'
-                    }`}
-                >
-                  🐾 Pet
-                </button>
-              </div>
-            </div>
-
             {/* Gender (optional) */}
             <div>
               <label
@@ -312,17 +282,44 @@ export default function CompleteProfilePage() {
                 Gender{' '}
                 <span className="text-white/25 font-normal">(optional)</span>
               </label>
-              <select
-                id="profile-gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 appearance-none cursor-pointer"
-              >
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsGenderOpen(!isGenderOpen)}
+                  className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 flex items-center justify-between"
+                >
+                  <span className="capitalize">{gender === '' ? 'Prefer not to say' : gender}</span>
+                  <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isGenderOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isGenderOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsGenderOpen(false)} />
+                    <div className="absolute top-full left-0 w-full mt-2 bg-[#181818] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 py-1">
+                      {[
+                        { value: '', label: 'Prefer not to say' },
+                        { value: 'male', label: 'Male' },
+                        { value: 'female', label: 'Female' },
+                        { value: 'other', label: 'Other' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setGender(opt.value);
+                            setIsGenderOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5 ${
+                            gender === opt.value ? 'text-[#F7941D] bg-[#F7941D]/10' : 'text-white/80'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Date of Birth (optional) */}

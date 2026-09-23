@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { uploadMediaToCloudinary } from '@/lib/utils/upload';
 import { Thread } from './ThreadCard';
+import FollowBadge from './FollowBadge';
 import {
   useGetPostByIdQuery,
   useLikePostMutation,
@@ -11,11 +14,15 @@ import {
   useRepostMutation,
   useUndoRepostMutation,
   useDeletePostMutation,
+  useSavePostMutation,
+  useUnsavePostMutation,
 } from '@/lib/store/services/postsApi';
 import {
   useGetCommentsByPostIdQuery,
   useLazyGetCommentRepliesQuery,
   useCreateCommentMutation,
+  useUpdateCommentMutation,
+  useDeleteCommentMutation,
 } from '@/lib/store/services/commentsApi';
 import { useGetProfileQuery } from '@/lib/store/services/usersApi';
 import type { ApiPost, ApiComment, ApiProfile } from '@/lib/store/types';
@@ -82,6 +89,7 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     time: timeStr,
     liked: post.is_liked,
     reposted: post.is_reposted,
+    isSaved: post.is_saved,
     repostedBy: post.reposter?.username,
     quotedPost: post.quoted_post
       ? mapApiPostToThread(post.quoted_post, profile)
@@ -89,7 +97,9 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     isOwn: !!isOwnPost,
     authorId: post.author?.id,
     isFollowed: post.author?.is_followed,
+    followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet',
+    petType: post.author?.pet_type,
   };
 }
 
@@ -140,18 +150,7 @@ const ImageAttachIcon = () => (
   </svg>
 );
 
-const GifIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
-    <text x="12" y="15" textAnchor="middle" fill="currentColor" fontSize="8" fontWeight="700" fontFamily="sans-serif">GIF</text>
-  </svg>
-);
 
-const ExpandIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 const MoreIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -181,6 +180,20 @@ const PawIcon = () => (
   </svg>
 );
 
+const FishIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="black"
+    style={{ width: 11, height: 11, display: 'inline-block' }}
+    aria-label="Fish profile"
+  >
+    <path d="M21.5 12C21.5 12 18 16 12 16C6 16 2.5 19 2.5 19V5C2.5 5 6 8 12 8C18 8 21.5 12 21.5 12Z" />
+    <circle cx="16" cy="10.5" r="1.5" fill="white" />
+    <path d="M11 8L10 3L14 6.5L11 8Z" />
+    <path d="M11 16L10 21L14 17.5L11 16Z" />
+  </svg>
+);
+
 /* ── Relative time helper ── */
 function relativeTime(isoDate: string): string {
   const dateString = isoDate.endsWith('Z') ? isoDate : `${isoDate}Z`;
@@ -203,16 +216,22 @@ function CommentItem({
   postId,
   index,
   depth = 0,
+  currentUserProfile,
+  onImageClick,
 }: {
   comment: ApiComment;
   postId: number;
   index: number;
   depth?: number;
+  currentUserProfile?: ApiProfile;
+  onImageClick?: (url: string) => void;
 }) {
-  const authorName = comment.author?.username ?? `User ${comment.author_id}`;
-  const avatar = comment.author?.profile_picture_url;
+  const isOwn = currentUserProfile?.user_id === comment.author_id;
+  const isDeleted = comment.is_deleted;
+  const authorName = isDeleted ? '[Deleted User]' : (comment.author?.username || (isOwn ? currentUserProfile?.username : undefined) || `User ${comment.author_id}`);
+  const avatar = isDeleted ? null : (comment.author?.profile_picture_url || (isOwn ? currentUserProfile?.profile_picture_url : undefined));
   const color = getAvatarColor(authorName);
-  const initials = authorName[0]?.toUpperCase() ?? '?';
+  const initials = isDeleted ? '?' : (authorName[0]?.toUpperCase() ?? '?');
   const time = relativeTime(comment.created_at);
 
   const [showReplies, setShowReplies] = useState(false);
@@ -224,9 +243,20 @@ function CommentItem({
   // Inline reply state
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [replyMedia, setReplyMedia] = useState<File | null>(null);
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+  const [editMediaUrl, setEditMediaUrl] = useState<string | null>(comment.image_url || null);
+  const [editMediaFile, setEditMediaFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const [fetchReplies, { isFetching: isLoadingReplies }] = useLazyGetCommentRepliesQuery();
   const [createComment] = useCreateCommentMutation();
+  const [updateComment] = useUpdateCommentMutation();
+  const [deleteComment] = useDeleteCommentMutation();
 
   const REPLIES_LIMIT = 10;
 
@@ -257,20 +287,68 @@ function CommentItem({
   };
 
   const handlePostInlineReply = async () => {
-    if (!replyText.trim()) return;
+    if (!replyText.trim() && !replyMedia) return;
     try {
+      setIsSaving(true);
+      let imageUrl = null;
+      if (replyMedia) {
+        const res = await uploadMediaToCloudinary(replyMedia);
+        imageUrl = res.url;
+      }
       const newReply = await createComment({
         post_id: postId,
         parent_id: comment.id,
         content: replyText.trim(),
+        image_url: imageUrl,
       }).unwrap();
+      
       setReplyText('');
+      setReplyMedia(null);
       setShowReplyInput(false);
       setReplies((prev) => [...prev, newReply]);
       setLocalRepliesCount((c) => c + 1);
       setShowReplies(true);
     } catch {
-      // Keep the text so the user can retry
+      // error
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim() && !editMediaUrl && !editMediaFile) return;
+    try {
+      setIsSaving(true);
+      let finalImageUrl = editMediaUrl;
+      if (editMediaFile) {
+        const res = await uploadMediaToCloudinary(editMediaFile);
+        finalImageUrl = res.url;
+      }
+
+      await updateComment({
+        commentId: comment.id,
+        body: {
+          content: editContent.trim(),
+          image_url: finalImageUrl,
+        },
+      }).unwrap();
+      
+      setIsEditing(false);
+    } catch {
+      // error
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (confirm('Are you sure you want to delete this comment?')) {
+      try {
+        await deleteComment({ commentId: comment.id, postId, parentId: comment.parent_id }).unwrap();
+        setShowMenu(false);
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -284,8 +362,8 @@ function CommentItem({
         style={{ paddingLeft: `${20 + depth * 28}px` }}
       >
         {/* Avatar */}
-        <div className="relative shrink-0">
-          {avatar ? (
+        <div className="relative shrink-0 mt-1">
+          {avatar && !isDeleted ? (
             <Image
               src={avatar}
               alt={authorName}
@@ -295,11 +373,22 @@ function CommentItem({
             />
           ) : (
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white"
-              style={{ background: `linear-gradient(135deg, ${color}dd, ${color}88)` }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white/50 bg-[#2a2a2a]"
+              style={!isDeleted ? { background: `linear-gradient(135deg, ${color}dd, ${color}88)`, color: 'white' } : {}}
             >
               {initials}
             </div>
+          )}
+          {!isOwn && !isDeleted && comment.author_id && (
+            <FollowBadge
+              authorId={comment.author_id}
+              authorName={authorName}
+              authorAvatar={comment.author?.profile_picture_url}
+              isFollowed={comment.author?.is_followed}
+              isOwn={isOwn}
+              followerCount={comment.author?.follower_count}
+              ringColor="transparent"
+            />
           )}
         </div>
 
@@ -307,25 +396,146 @@ function CommentItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-0.5">
             <div className="flex items-baseline gap-2">
-              <span className="text-[14px] font-semibold text-white truncate max-w-[180px]">{authorName}</span>
-              <span className="text-[13px] text-white/35">{time}</span>
+              <span className={`text-[14px] font-semibold truncate max-w-[180px] ${isDeleted ? 'text-white/40' : 'text-white'}`}>
+                {authorName}
+              </span>
+              <span className="text-[13px] text-white/35 flex items-center gap-1">
+                {time}
+                {comment.is_edited && !isDeleted && <span className="text-[11px] text-white/20 italic">(edited)</span>}
+              </span>
             </div>
-            <button className="bg-transparent border-none text-white/30 cursor-pointer p-1 rounded-md transition-colors hover:bg-white/10 hover:text-white/60">
-              <MoreIcon />
-            </button>
+            {isOwn && !isDeleted && !isEditing && (
+              <div className="relative">
+                <button
+                  className="bg-transparent border-none text-white/30 cursor-pointer p-1 rounded-md transition-colors hover:bg-white/10 hover:text-white/60"
+                  onClick={() => setShowMenu(!showMenu)}
+                >
+                  <MoreIcon />
+                </button>
+                {showMenu && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
+                    <div className="absolute right-0 bottom-full mb-1 w-32 bg-[#1c1c1c] border border-white/10 rounded-lg shadow-xl z-40 overflow-hidden flex flex-col py-1">
+                      <button
+                        className="text-left px-4 py-2 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
+                        onClick={() => {
+                          setShowMenu(false);
+                          setIsEditing(true);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="text-left px-4 py-2 text-sm text-[#e0245e] hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
+                        onClick={handleDelete}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
-          <p className="text-[14px] font-light leading-relaxed text-white/90 mb-1.5 break-words">{comment.content}</p>
+          {isEditing ? (
+            <div className="mt-2 flex flex-col gap-2 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/5">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full bg-transparent border-none outline-none text-white/90 text-[13px] font-light placeholder:text-white/30 resize-none min-h-[60px]"
+                autoFocus
+              />
+              {(editMediaUrl || editMediaFile) && (
+                <div className="relative inline-block w-max mt-2">
+                  <Image
+                    src={editMediaFile ? URL.createObjectURL(editMediaFile) : editMediaUrl!}
+                    alt="Edit Media"
+                    width={200}
+                    height={200}
+                    className="max-h-[150px] w-auto rounded-lg object-cover"
+                    unoptimized
+                  />
+                  <button
+                    onClick={() => {
+                      setEditMediaUrl(null);
+                      setEditMediaFile(null);
+                    }}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer border-none hover:bg-black/80"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                <label className="cursor-pointer text-white/40 hover:text-white/70">
+                  <ImageAttachIcon />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setEditMediaFile(e.target.files[0]);
+                        setEditMediaUrl(null);
+                      }
+                    }}
+                  />
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    className="bg-transparent text-white/50 border border-white/15 rounded-full py-1 px-3 text-[12px] font-semibold cursor-pointer transition-all hover:bg-white/10 hover:text-white"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditContent(comment.content);
+                      setEditMediaUrl(comment.image_url);
+                      setEditMediaFile(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="bg-white text-black border-none rounded-full py-1 px-3 text-[12px] font-semibold cursor-pointer transition-all hover:opacity-85 disabled:opacity-50"
+                    onClick={handleSaveEdit}
+                    disabled={isSaving || (!editContent.trim() && !editMediaUrl && !editMediaFile)}
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className={`text-[14px] font-light leading-relaxed mb-1.5 break-words ${isDeleted ? 'text-white/30 italic' : 'text-white/90'}`}>
+                {isDeleted ? '[This comment has been deleted]' : comment.content}
+              </p>
+              {!isDeleted && comment.image_url && (
+                <div className="mt-2 mb-2">
+                  <Image
+                    src={comment.image_url}
+                    alt="Comment media"
+                    width={400}
+                    height={300}
+                    unoptimized
+                    onClick={() => onImageClick?.(comment.image_url!)}
+                    className="max-h-[250px] w-auto rounded-xl object-cover cursor-pointer"
+                  />
+                </div>
+              )}
+            </>
+          )}
 
           {/* Actions */}
-          <div className="flex items-center gap-3.5 mt-0.5">
-            <button
-              className="flex items-center gap-1.5 bg-transparent border-none text-white/40 cursor-pointer py-0.5 px-1 rounded-md transition-all hover:text-white/70 hover:bg-white/5 font-inherit text-[12px] font-medium"
-              onClick={() => setShowReplyInput((prev) => !prev)}
-            >
-              <div className="w-4 h-4 shrink-0"><CommentIcon /></div>
-              <span>Reply</span>
-            </button>
+          <div className="flex items-center gap-3.5 mt-1">
+            {!isDeleted && (
+              <button
+                className="flex items-center gap-1.5 bg-transparent border-none text-white/40 cursor-pointer py-0.5 px-1 rounded-md transition-all hover:text-white/70 hover:bg-white/5 font-inherit text-[12px] font-medium"
+                onClick={() => setShowReplyInput((prev) => !prev)}
+              >
+                <div className="w-4 h-4 shrink-0"><CommentIcon /></div>
+                <span>Reply</span>
+              </button>
+            )}
 
             {/* View replies button */}
             {localRepliesCount > 0 && (
@@ -353,27 +563,57 @@ function CommentItem({
                 )}
               </button>
             )}
-          </div>
-
+            </div>
           {/* Inline reply input */}
           {showReplyInput && (
-            <div className="mt-2.5 flex items-center gap-2.5 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/5">
-              <input
-                type="text"
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handlePostInlineReply(); }}
-                placeholder={`Reply to ${authorName}...`}
-                className="flex-1 bg-transparent border-none outline-none text-white/90 text-[13px] font-light placeholder:text-white/30 py-0.5"
-                autoFocus
-              />
-              <button
-                className="bg-transparent text-white/50 border border-white/15 rounded-full py-1 px-3 text-[12px] font-semibold cursor-pointer transition-all hover:bg-white/10 hover:text-white hover:border-white/30 disabled:opacity-30 disabled:cursor-default"
-                onClick={handlePostInlineReply}
-                disabled={!replyText.trim()}
-              >
-                Reply
-              </button>
+            <div className="mt-2.5 flex flex-col gap-2 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/5">
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="text"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handlePostInlineReply(); }}
+                  placeholder={`Reply to ${authorName}...`}
+                  className="flex-1 bg-transparent border-none outline-none text-white/90 text-[13px] font-light placeholder:text-white/30 py-0.5"
+                  autoFocus
+                />
+                <label className="cursor-pointer text-white/40 hover:text-white/70">
+                  <ImageAttachIcon />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) setReplyMedia(e.target.files[0]);
+                    }}
+                  />
+                </label>
+                <button
+                  className="bg-transparent text-white/50 border border-white/15 rounded-full py-1 px-3 text-[12px] font-semibold cursor-pointer transition-all hover:bg-white/10 hover:text-white hover:border-white/30 disabled:opacity-30 disabled:cursor-default"
+                  onClick={handlePostInlineReply}
+                  disabled={isSaving || (!replyText.trim() && !replyMedia)}
+                >
+                  {isSaving ? '...' : 'Reply'}
+                </button>
+              </div>
+              {replyMedia && (
+                <div className="relative inline-block w-max mt-1">
+                  <Image
+                    src={URL.createObjectURL(replyMedia)}
+                    alt="Reply Preview"
+                    width={100}
+                    height={100}
+                    className="max-h-[80px] w-auto rounded-lg object-cover"
+                    unoptimized
+                  />
+                  <button
+                    onClick={() => setReplyMedia(null)}
+                    className="absolute -top-2 -right-2 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center cursor-pointer border-none hover:bg-black/80 text-[10px]"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -389,6 +629,8 @@ function CommentItem({
               postId={postId}
               index={replyIdx}
               depth={depth + 1}
+              currentUserProfile={currentUserProfile}
+              onImageClick={onImageClick}
             />
           ))}
           {/* Load more replies */}
@@ -474,16 +716,16 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
           {post.media[0].type === 'video' ? (
             <video
               src={post.media[0].url}
-              className="w-full max-h-[200px] rounded-xl object-cover"
+              className="w-full max-h-[380px] rounded-xl object-cover"
             />
           ) : (
             <Image
               src={post.media[0].url}
               alt="Quoted media"
-              width={480}
-              height={200}
+              width={680}
+              height={380}
               unoptimized
-              className="w-full max-h-[200px] rounded-xl object-cover"
+              className="w-full max-h-[380px] rounded-xl object-cover"
             />
           )}
         </div>
@@ -526,6 +768,8 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
   const [repostPost] = useRepostMutation();
   const [undoRepostPost] = useUndoRepostMutation();
   const [deletePost] = useDeletePostMutation();
+  const [savePost] = useSavePostMutation();
+  const [unsavePost] = useUnsavePostMutation();
 
   const { data: profile } = useGetProfileQuery();
 
@@ -539,26 +783,34 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
   const [likes, setLikes] = useState(thread?.likes ?? 0);
   const [reposted, setReposted] = useState(thread?.reposted ?? false);
   const [reposts, setReposts] = useState(thread?.reposts ?? 0);
+  const [isSaved, setIsSaved] = useState(thread?.isSaved ?? false);
 
   if (
     prevThread?.liked !== thread?.liked ||
     prevThread?.likes !== thread?.likes ||
     prevThread?.reposted !== thread?.reposted ||
-    prevThread?.reposts !== thread?.reposts
+    prevThread?.reposts !== thread?.reposts ||
+    prevThread?.isSaved !== thread?.isSaved
   ) {
     setPrevThread(thread);
     setLiked(thread?.liked ?? false);
     setLikes(thread?.likes ?? 0);
     setReposted(thread?.reposted ?? false);
     setReposts(thread?.reposts ?? 0);
+    setIsSaved(thread?.isSaved ?? false);
   }
   const [replyText, setReplyText] = useState('');
   const [sortBy, setSortBy] = useState<'top' | 'newest'>('top');
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
-  const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [, setApi] = useState<CarouselApi>();
+  const [api, setApi] = useState<CarouselApi>();
+  const [selectedMedia, setSelectedMedia] = useState<{url: string; type: string} | null>(null);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   // Fetch top-level comments from the API (paginated)
   const { data: apiComments } = useGetCommentsByPostIdQuery(
@@ -593,17 +845,30 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
     }
   };
 
+  const [replyMedia, setReplyMedia] = useState<File | null>(null);
+  const [isPostingReply, setIsPostingReply] = useState(false);
+
   const handlePostReply = async () => {
-    if (!replyText.trim() || isNaN(numericId)) return;
+    if ((!replyText.trim() && !replyMedia) || isNaN(numericId)) return;
     try {
+      setIsPostingReply(true);
+      let imageUrl = null;
+      if (replyMedia) {
+        const res = await uploadMediaToCloudinary(replyMedia);
+        imageUrl = res.url;
+      }
       await createComment({
         post_id: numericId,
         parent_id: null,
         content: replyText.trim(),
+        image_url: imageUrl,
       }).unwrap();
       setReplyText('');
+      setReplyMedia(null);
     } catch {
       // Keep the text so the user can retry
+    } finally {
+      setIsPostingReply(false);
     }
   };
 
@@ -749,20 +1014,25 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                   {initials}
                 </div>
               )}
-              {thread.author !== 'You' && (
-                <div className="absolute -bottom-1 -right-1 bg-[#181818] rounded-full flex items-center justify-center w-4.5 h-4.5">
-                  <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 fill-white">
-                    <path d="M8 2a6 6 0 100 12A6 6 0 008 2zM8 1a7 7 0 110 14A7 7 0 018 1zm3 6.5H8.5V4.5a.5.5 0 00-1 0v3H4.5a.5.5 0 000 1h3v3a.5.5 0 001 0v-3h3a.5.5 0 000-1z" fillRule="evenodd" clipRule="evenodd" />
-                  </svg>
-                </div>
+              {!thread.isOwn && (
+                <FollowBadge
+                  authorId={thread.authorId}
+                  authorName={thread.author}
+                  authorAvatar={thread.avatar}
+                  isFollowed={thread.isFollowed}
+                  isOwn={thread.isOwn}
+                  followerCount={thread.followerCount}
+                  ringColor="#181818"
+                  size="md"
+                />
               )}
             </div>
             <div className="flex items-baseline gap-2 flex-1 min-w-0">
               <span className="text-[15px] font-semibold text-white flex items-center gap-1.5">
                 {thread.author}
                 {thread.isPetProfile && (
-                  <span className="inline-flex items-center justify-center bg-[#d4d4d4] rounded-full w-[15px] h-[15px] relative -top-[0.5px]">
-                    <PawIcon />
+                  <span className="inline-flex items-center justify-center bg-[#d4d4d4] rounded-full w-[15px] h-[15px] ml-1.5 relative -top-[1px]">
+                    {thread.petType?.toLowerCase() === 'fish' ? <FishIcon /> : <PawIcon />}
                   </span>
                 )}
               </span>
@@ -806,6 +1076,29 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                         Delete
                       </button>
                     )}
+                    <button 
+                      className="text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setShowMenu(false);
+                        const numId = Number(thread.id);
+                        if (isNaN(numId)) return;
+                        try {
+                          if (isSaved) {
+                            setIsSaved(false);
+                            await unsavePost(numId).unwrap();
+                          } else {
+                            setIsSaved(true);
+                            await savePost(numId).unwrap();
+                          }
+                        } catch (err) {
+                          setIsSaved(!isSaved); // revert on error
+                          console.error("Failed to save/unsave post", err);
+                        }
+                      }}
+                    >
+                      {isSaved ? 'Unsave post' : 'Save post'}
+                    </button>
                     <button
                       className="text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
                       onClick={(e) => {
@@ -844,23 +1137,30 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                   {thread.media.map((item, idx) => (
                     <CarouselItem
                       key={idx}
-                      className={`pl-2 ${thread.media!.length === 1 ? 'basis-full' : 'basis-[70%] sm:basis-[240px]'}`}
+                      className={`pl-2 ${thread.media!.length === 1 ? 'basis-full' : 'basis-[75%] sm:basis-[240px]'}`}
                     >
                       {item.type === 'video' ? (
                         <video
                           src={item.url}
                           controls
-                          className={`rounded-xl object-cover shrink-0 select-none ${thread.media!.length === 1 ? 'w-full max-h-[360px]' : 'w-full h-[300px]'}`}
+                          className={`rounded-xl object-cover shrink-0 select-none ${thread.media!.length === 1 ? 'w-full max-h-[380px]' : 'w-full h-[320px]'}`}
                         />
                       ) : (
                         <Image
                           src={item.url}
                           alt={`Thread media ${idx + 1}`}
-                          width={thread.media!.length === 1 ? 600 : 280}
-                          height={thread.media!.length === 1 ? 360 : 360}
+                          width={thread.media!.length === 1 ? 680 : 300}
+                          height={thread.media!.length === 1 ? 380 : 400}
                           unoptimized
                           draggable={false}
-                          className={`rounded-xl object-cover shrink-0 select-none ${thread.media!.length === 1 ? 'w-full max-h-[360px]' : 'w-full h-[300px]'}`}
+                          onClick={() => {
+                            const emblaInstance = api as unknown as { clickAllowed?: () => boolean };
+                            if (emblaInstance?.clickAllowed && !emblaInstance.clickAllowed()) {
+                              return;
+                            }
+                            setSelectedMedia(item);
+                          }}
+                          className={`rounded-xl object-cover shrink-0 select-none cursor-pointer ${thread.media!.length === 1 ? 'w-full max-h-[380px]' : 'w-full h-[320px]'}`}
                         />
                       )}
                     </CarouselItem>
@@ -890,55 +1190,20 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                 className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${reposted ? 'text-[#00c37d] hover:bg-[#00c37d]/10' : 'text-white/50 hover:text-white/85'}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowRepostMenu(!showRepostMenu);
+                  if (reposted) {
+                    handleRepostToggle();
+                  } else {
+                    window.dispatchEvent(
+                      new CustomEvent('community-open-quote-thread', {
+                        detail: { thread: thread.quotedPost ? thread.quotedPost : thread },
+                      })
+                    );
+                  }
                 }}
               >
                 <div className="w-5 h-5 shrink-0"><RepostIcon active={reposted} /></div>
                 <span className="text-[13px] font-medium">{formatCount(reposts)}</span>
               </button>
-              {showRepostMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowRepostMenu(false);
-                    }}
-                  />
-                  <div className="absolute left-0 bottom-full mb-1 w-36 bg-[#1c1c1c] border border-white/10 rounded-xl shadow-xl z-40 overflow-hidden flex flex-col py-1">
-                    <button
-                      className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowRepostMenu(false);
-                        handleRepostToggle();
-                      }}
-                    >
-                      <div className="w-4.5 h-4.5 shrink-0">
-                        <RepostIcon />
-                      </div>
-                      {reposted ? 'Undo repost' : 'Repost'}
-                    </button>
-                    <button
-                      className="flex items-center gap-3 text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer font-medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowRepostMenu(false);
-                        window.dispatchEvent(
-                          new CustomEvent('community-open-quote-thread', {
-                            detail: { thread: thread.quotedPost ? thread.quotedPost : thread },
-                          })
-                        );
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" className="w-4.5 h-4.5 shrink-0">
-                        <path d="M10 11H6a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4m12-4h-4a1 1 0 01-1-1V6a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1zm0 0c0 2.5-2 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Quote
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
 
             <button
@@ -992,33 +1257,75 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
 
         {/* Reply input (top-level comments only) */}
         <div className="border-t border-b border-white/5">
-          <div className="flex items-center gap-3 px-5 py-3.5">
-            <div className="w-9 h-9 rounded-full bg-[#2a2a2a] flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#666]">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
+          <div className="flex items-start gap-3 px-5 py-3.5">
+            <div className="w-9 h-9 shrink-0 mt-0.5">
+              {profile?.profile_picture_url ? (
+                <Image
+                  src={profile.profile_picture_url}
+                  alt={profile.username}
+                  width={36}
+                  height={36}
+                  className="w-9 h-9 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-[#2a2a2a] flex items-center justify-center text-white/50 font-bold text-sm">
+                  {profile?.username?.[0]?.toUpperCase() ?? '?'}
+                </div>
+              )}
             </div>
-            <div className="flex-1">
-              <input
-                type="text"
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handlePostReply(); }}
-                placeholder={`Reply to ${thread.author.toLowerCase().replace(/\s/g, '.')}...`}
-                className="w-full bg-transparent border-none outline-none text-white/90 text-[14px] font-light placeholder:text-white/30 py-1"
-                id="thread-reply-input"
-              />
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <button className="bg-transparent border-none text-white/30 cursor-pointer p-1.5 rounded-md transition-colors hover:bg-white/10 hover:text-white/50">
-                <ImageAttachIcon />
-              </button>
-              <button className="bg-transparent border-none text-white/30 cursor-pointer p-1.5 rounded-md transition-colors hover:bg-white/10 hover:text-white/50">
-                <GifIcon />
-              </button>
-              <button className="bg-transparent border-none text-white/30 cursor-pointer p-1.5 rounded-md transition-colors hover:bg-white/10 hover:text-white/50">
-                <ExpandIcon />
-              </button>
+            
+            <div className="flex-1 flex flex-col gap-2 min-w-0">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handlePostReply(); }}
+                  placeholder={`Reply to ${thread.author.toLowerCase().replace(/\s/g, '.')}...`}
+                  className="flex-1 bg-transparent border-none outline-none text-white/90 text-[14px] font-light placeholder:text-white/30 py-1"
+                  id="thread-reply-input"
+                />
+                
+                <div className="flex items-center gap-1 shrink-0">
+                  <label className="cursor-pointer text-white/40 hover:text-white/70 p-1.5 flex transition-colors">
+                    <ImageAttachIcon />
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) setReplyMedia(e.target.files[0]);
+                      }}
+                    />
+                  </label>
+                  <button 
+                    className="bg-white text-black border-none rounded-full py-1.5 px-4 text-[13px] font-bold cursor-pointer transition-all hover:opacity-85 disabled:opacity-50 ml-1"
+                    onClick={handlePostReply}
+                    disabled={isPostingReply || (!replyText.trim() && !replyMedia)}
+                  >
+                    {isPostingReply ? '...' : 'Reply'}
+                  </button>
+                </div>
+              </div>
+              
+              {replyMedia && (
+                <div className="relative inline-block w-max">
+                  <Image
+                    src={URL.createObjectURL(replyMedia)}
+                    alt="Reply Preview"
+                    width={100}
+                    height={100}
+                    className="max-h-[80px] w-auto rounded-lg object-cover"
+                    unoptimized
+                  />
+                  <button
+                    onClick={() => setReplyMedia(null)}
+                    className="absolute -top-2 -right-2 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center cursor-pointer border-none hover:bg-black/80 text-[10px]"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1031,6 +1338,8 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               comment={comment}
               postId={numericId}
               index={idx}
+              currentUserProfile={profile}
+              onImageClick={(url) => setSelectedMedia({ url, type: 'image' })}
             />
           ))
         ) : (
@@ -1039,6 +1348,52 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
           </div>
         )}
       </div>
+
+      {mounted && selectedMedia && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-black flex items-center justify-center cursor-pointer"
+          onClick={() => setSelectedMedia(null)}
+        >
+          <button
+            className="absolute top-5 right-5 bg-white/10 hover:bg-white/20 border-none text-white cursor-pointer p-3 rounded-full flex items-center justify-center transition-all z-[10000]"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedMedia(null);
+            }}
+            aria-label="Close"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          {selectedMedia.type === 'video' ? (
+            <video
+              src={selectedMedia.url}
+              controls
+              autoPlay
+              className="max-w-[95vw] max-h-[95vh] w-full h-full object-contain cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <Image
+              src={selectedMedia.url}
+              alt="Media"
+              width={1200}
+              height={800}
+              unoptimized
+              className="max-w-[95vw] max-h-[95vh] w-full h-full object-contain cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

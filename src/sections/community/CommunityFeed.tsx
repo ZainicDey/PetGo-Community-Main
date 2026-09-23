@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ThreadCard, { Thread } from './ThreadCard';
 import ThreadFeedSkeleton from './ThreadSkeleton';
-import { useGetPostsQuery, useCreatePostMutation } from '@/lib/store/services/postsApi';
+import { useGetPostsQuery, useCreatePostMutation, useRepostMutation } from '@/lib/store/services/postsApi';
 import { useGetProfileQuery, useGetUserLikesQuery } from '@/lib/store/services/usersApi';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
 import { uploadMediaToCloudinary } from '@/lib/utils/upload';
@@ -55,6 +55,7 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     time: timeStr,
     liked: post.is_liked,
     reposted: post.is_reposted,
+    isSaved: post.is_saved,
     repostedBy: post.reposter?.username,
     quotedPost: post.quoted_post
       ? mapApiPostToThread(post.quoted_post, profile)
@@ -62,7 +63,9 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     isOwn: !!isOwnPost,
     authorId: post.author?.id,
     isFollowed: post.author?.is_followed,
+    followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet',
+    petType: post.author?.pet_type,
   };
 }
 
@@ -87,11 +90,28 @@ export default function CommunityFeed() {
   const isLoading = activeTab === 'foryou' ? isLoadingFeed : isLoadingLiked;
   const isError = activeTab === 'foryou' ? isErrorFeed : isErrorLiked;
 
-  // Map API posts to Thread[] whenever data changes
-  const apiThreads: Thread[] = currentPosts?.map((p) => mapApiPostToThread(p, profile)) ?? [];
-  const threads = activeTab === 'foryou' ? [...localThreads, ...apiThreads] : apiThreads;
+  const apiThreads: Thread[] = React.useMemo(() => {
+    return currentPosts?.map((p) => mapApiPostToThread(p, profile)) ?? [];
+  }, [currentPosts, profile]);
+
+  const threads = React.useMemo(() => {
+    return activeTab === 'foryou' ? [...localThreads, ...apiThreads] : apiThreads;
+  }, [activeTab, localThreads, apiThreads]);
+
+  const [repostPost] = useRepostMutation();
 
   const handleNewThread = React.useCallback(async (text: string, files: File[] = [], quotedPostId?: number) => {
+    // If it's a quote but text and files are empty, treat as a direct repost
+    if (!text.trim() && files.length === 0 && quotedPostId) {
+      try {
+        await repostPost(quotedPostId).unwrap();
+        // The RTK Query will invalidate tags and refetch
+      } catch (err) {
+        console.error('Failed to repost:', err);
+      }
+      return;
+    }
+
     // Optimistic local insert for instant feedback
     const tempMedia = files.map((f) => ({
       url: URL.createObjectURL(f),
@@ -133,7 +153,7 @@ export default function CommunityFeed() {
       // Keep the optimistic thread on failure so it doesn't disappear
       // In a real app, you might show a retry button here
     }
-  }, [profile, createPost]);
+  }, [profile, createPost, repostPost, threads]);
 
   useEffect(() => {
     const handleCustomPost = (e: Event) => {

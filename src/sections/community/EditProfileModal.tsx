@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Camera, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Camera, User, ChevronDown, Trash2 } from 'lucide-react';
 import {
   useGetProfileQuery,
   useUpdateProfileMutation,
   useCheckUsernameMutation,
+  useDeletePetProfileMutation,
   type UpdateProfileBody,
 } from '@/lib/store/services/usersApi';
 
@@ -16,20 +18,34 @@ interface EditProfileModalProps {
 export default function EditProfileModal({ onClose }: EditProfileModalProps) {
   const { data: profile } = useGetProfileQuery();
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
+  const [deletePetProfile, { isLoading: isDeleting }] = useDeletePetProfileMutation();
   const [checkUsername] = useCheckUsernameMutation();
+  const router = useRouter();
 
   const [username, setUsername] = useState(profile?.username || '');
   const [profileType, setProfileType] = useState<'user' | 'pet'>(
     profile?.profile_type?.toLowerCase() === 'pet' ? 'pet' : 'user',
   );
+
+  const isPresetPet = (pt?: string) => pt ? ['dog', 'cat', 'fish'].includes(pt.toLowerCase()) : false;
+  const [petType, setPetType] = useState(
+    isPresetPet(profile?.pet_type) ? profile!.pet_type!.toLowerCase() : (profile?.pet_type ? 'other' : 'dog')
+  );
+  const [isPetTypeOpen, setIsPetTypeOpen] = useState(false);
+  const [customPetType, setCustomPetType] = useState(
+    !isPresetPet(profile?.pet_type) && profile?.pet_type ? profile.pet_type : ''
+  );
+
   const [gender, setGender] = useState(profile?.gender || '');
+  const [isGenderOpen, setIsGenderOpen] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState(profile?.date_of_birth || '');
   const [profilePictureUrl, setProfilePictureUrl] = useState(
     profile?.profile_picture_url || '',
   );
   const [profileFile, setProfileFile] = useState<File | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(
     null,
@@ -62,6 +78,20 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
     return () => clearTimeout(timer);
   }, [username, checkUsername, profile?.username]);
+
+  const handleDeleteProfile = async () => {
+    try {
+      await deletePetProfile().unwrap();
+      onClose();
+      router.push('/community/profile');
+    } catch (err) {
+      const apiError = err as { data?: { detail?: string }; status?: number };
+      setError(
+        apiError?.data?.detail || 'Failed to delete profile. Please try again.',
+      );
+      setIsDeleteModalOpen(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +160,11 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
       profile?.profile_type?.toLowerCase() === 'pet' ? 'pet' : 'user';
     if (profileType !== initialProfileType) {
       patchPayload.profile_type = profileType;
+    }
+
+    const finalPetType = petType === 'other' ? customPetType.trim() : petType;
+    if (profileType === 'pet' && finalPetType !== (profile?.pet_type || '')) {
+      patchPayload.pet_type = finalPetType;
     }
 
     if (gender !== (profile?.gender || '')) {
@@ -340,38 +375,74 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                 )}
             </div>
 
-            {/* Profile Type */}
-            <div>
-              <label className="block text-sm text-white/60 mb-2 font-medium">
-                Profile Type
-              </label>
-              <div className="flex gap-3">
-                <button
-                  id="edit-profile-type-user"
-                  type="button"
-                  onClick={() => setProfileType('user')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${
-                    profileType === 'user'
-                      ? 'bg-[#F7941D]/15 border-[#F7941D]/50 text-[#F7941D]'
-                      : 'bg-[#101010] border-white/10 text-white/50 hover:border-white/20'
-                  }`}
-                >
-                  🧑 User
-                </button>
-                <button
-                  id="edit-profile-type-pet"
-                  type="button"
-                  onClick={() => setProfileType('pet')}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border cursor-pointer ${
-                    profileType === 'pet'
-                      ? 'bg-[#F7941D]/15 border-[#F7941D]/50 text-[#F7941D]'
-                      : 'bg-[#101010] border-white/10 text-white/50 hover:border-white/20'
-                  }`}
-                >
-                  🐾 Pet
-                </button>
-              </div>
-            </div>
+
+
+            {/* Pet Type (Only shown if Profile Type is Pet) */}
+            {profileType === 'pet' && (
+              <>
+                <div>
+                  <label
+                    htmlFor="edit-profile-pet-type"
+                    className="block text-sm text-white/60 mb-1.5 font-medium"
+                  >
+                    Pet Type
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsPetTypeOpen(!isPetTypeOpen)}
+                      className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 flex items-center justify-between"
+                    >
+                      <span className="capitalize">{petType}</span>
+                      <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isPetTypeOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {isPetTypeOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsPetTypeOpen(false)} />
+                        <div className="absolute top-full left-0 w-full mt-2 bg-[#181818] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 py-1">
+                          {['dog', 'cat', 'fish', 'other'].map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => {
+                                setPetType(type);
+                                setIsPetTypeOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5 capitalize ${
+                                petType === type ? 'text-[#F7941D] bg-[#F7941D]/10' : 'text-white/80'
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Custom Pet Type (if Other) */}
+                {petType === 'other' && (
+                  <div>
+                    <label
+                      htmlFor="edit-profile-custom-pet-type"
+                      className="block text-sm text-white/60 mb-1.5 font-medium"
+                    >
+                      Specify Pet Type
+                    </label>
+                    <input
+                      id="edit-profile-custom-pet-type"
+                      type="text"
+                      value={customPetType}
+                      onChange={(e) => setCustomPetType(e.target.value)}
+                      placeholder="e.g. Rabbit, Bird, Reptile"
+                      className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30"
+                    />
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Gender */}
             <div>
@@ -382,17 +453,44 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                 Gender{' '}
                 <span className="text-white/25 font-normal">(optional)</span>
               </label>
-              <select
-                id="edit-profile-gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 appearance-none cursor-pointer"
-              >
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsGenderOpen(!isGenderOpen)}
+                  className="w-full bg-[#101010] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus:border-[#F7941D]/60 focus:ring-1 focus:ring-[#F7941D]/30 flex items-center justify-between"
+                >
+                  <span className="capitalize">{gender === '' ? 'Prefer not to say' : gender}</span>
+                  <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isGenderOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isGenderOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsGenderOpen(false)} />
+                    <div className="absolute top-full left-0 w-full mt-2 bg-[#181818] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 py-1">
+                      {[
+                        { value: '', label: 'Prefer not to say' },
+                        { value: 'male', label: 'Male' },
+                        { value: 'female', label: 'Female' },
+                        { value: 'other', label: 'Other' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setGender(opt.value);
+                            setIsGenderOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5 ${
+                            gender === opt.value ? 'text-[#F7941D] bg-[#F7941D]/10' : 'text-white/80'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Date of Birth */}
@@ -430,9 +528,103 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                 <span>{error}</span>
               </div>
             )}
+
+            {/* Delete Pet Profile Button */}
+            {profile?.profile_type?.toLowerCase() === 'pet' && (
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="mt-2 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/40 active:scale-[0.98] cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Pet Profile
+              </button>
+            )}
+
+            {/* Spacer for dropdowns to avoid clipping in the scroll container */}
+            {(isPetTypeOpen || isGenderOpen) && <div className="h-15" />}
           </form>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div 
+          className="fixed inset-0 z-[3000] flex items-center justify-center"
+          onClick={() => setIsDeleteModalOpen(false)}
+        >
+          {/* Animated backdrop */}
+          <style>{`
+            @keyframes deleteBackdropIn {
+              from { opacity: 0; backdrop-filter: blur(0px); }
+              to { opacity: 1; backdrop-filter: blur(8px); }
+            }
+            @keyframes deleteModalZoom {
+              0% { opacity: 0; transform: scale(0.4); }
+              50% { opacity: 1; transform: scale(1.03); }
+              70% { transform: scale(0.97); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+            @keyframes deleteIconPulse {
+              0% { opacity: 0; transform: scale(0); }
+              60% { transform: scale(1.2); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+            @keyframes deleteTextSlide {
+              from { opacity: 0; transform: translateY(8px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          <div 
+            className="absolute inset-0 bg-black/80"
+            style={{ animation: 'deleteBackdropIn 0.3s ease-out forwards' }}
+          />
+          <div
+            className="relative w-[90%] max-w-[320px] bg-[#181818] border border-white/10 rounded-2xl flex flex-col items-center p-6 text-center shadow-2xl"
+            style={{ animation: 'deleteModalZoom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div 
+              className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4"
+              style={{ animation: 'deleteIconPulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both' }}
+            >
+              <Trash2 className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 
+              className="text-xl font-semibold text-white mb-2"
+              style={{ animation: 'deleteTextSlide 0.35s ease-out 0.2s both' }}
+            >
+              Delete Profile?
+            </h3>
+            <p 
+              className="text-sm text-white/60 mb-6"
+              style={{ animation: 'deleteTextSlide 0.35s ease-out 0.28s both' }}
+            >
+              Are you sure you want to delete this pet profile? This action cannot be undone.
+            </p>
+            <div 
+              className="flex gap-3 w-full"
+              style={{ animation: 'deleteTextSlide 0.35s ease-out 0.35s both' }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border border-white/10 bg-[#101010] text-white hover:bg-white/5 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteProfile}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border border-red-500/50 bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-50 cursor-pointer flex justify-center items-center gap-2"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

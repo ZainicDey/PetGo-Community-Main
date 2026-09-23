@@ -238,7 +238,11 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
   const [quoteThread, setQuoteThread] = useState<Thread | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const { data: me } = useGetMeQuery();
+  useGetMeQuery();
+
+  const isOnActivityRoute = pathname?.startsWith('/community/activity') ?? false;
+  const [activityExpanded, setActivityExpanded] = useState(isOnActivityRoute);
+  const [showMobileActivityMenu, setShowMobileActivityMenu] = useState(false);
 
   /* Derive active nav from current pathname */
   const activeNav = pathname?.startsWith('/community/profile')
@@ -248,6 +252,24 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
       : pathname?.startsWith('/community/activity')
         ? 'activity'
         : 'home';
+
+  /* Derive active activity sub-route */
+  const activeActivitySub = pathname === '/community/activity/liked'
+    ? 'liked'
+    : pathname === '/community/activity/following'
+      ? 'following'
+      : pathname === '/community/activity'
+        ? 'myactivity'
+        : null;
+
+  /* Keep activity expanded when navigating between sub-routes */
+  const [prevOnActivity, setPrevOnActivity] = useState(isOnActivityRoute);
+  if (isOnActivityRoute && !prevOnActivity) {
+    setPrevOnActivity(true);
+    setActivityExpanded(true);
+  } else if (!isOnActivityRoute && prevOnActivity) {
+    setPrevOnActivity(false);
+  }
 
   React.useEffect(() => {
     const handleOpenModal = () => setShowNewThread(true);
@@ -363,45 +385,122 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
             );
           })}
 
-          {/* Activity, Profile — no wrapper div on mobile so they stay in the flex row */}
+          {/* Activity section with expandable sub-items */}
           <div className="contents sm:block sm:mt-6">
-            {navItems.slice(2).map((item) => {
-              const isActive = activeNav === item.id;
-              const Icon = isActive ? item.FilledIcon : item.OutlineIcon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    /* Guard: redirect to /complete-profile if profile is incomplete */
-                    if (item.id === 'profile' && me && !me.has_social_profile) {
-                      router.push('/complete-profile');
-                      return;
-                    }
-                    router.push(item.href);
-                  }}
-                  className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'}`}
-                  style={{
-                    width: 'var(--nav-btn-width)',
-                    height: 'var(--nav-btn-height)',
-                    fontSize: 'var(--nav-btn-font-size)',
-                  }}
-                  id={`community-nav-${item.id}`}
+            {/* Desktop: Activity toggle button */}
+            <button
+              className={`hidden sm:flex ${navBtnBaseClass} ${activeNav === 'activity' ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'}`}
+              style={{
+                width: 'var(--nav-btn-width)',
+                height: 'var(--nav-btn-height)',
+                fontSize: 'var(--nav-btn-font-size)',
+              }}
+              id="community-nav-activity"
+              onClick={() => setActivityExpanded((prev) => !prev)}
+            >
+              <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
+                {activeNav === 'activity' ? <ActivityFilledIcon /> : <ActivityOutlineIcon />}
+              </span>
+              <span className="hidden lg:flex items-center gap-1.5 leading-none tracking-tight">
+                Activity
+                <svg
+                  viewBox="0 0 12 12"
+                  fill="currentColor"
+                  className={`w-2.5 h-2.5 transition-transform duration-200 ${activityExpanded ? 'rotate-180' : ''}`}
                 >
-                  <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
-                    <Icon />
-                  </span>
-                  <span className="block sm:hidden lg:block leading-none tracking-tight">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
+                  <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
+
+            {/* Desktop: Sub-items (expandable) */}
+            <div
+              className={`hidden sm:block overflow-hidden transition-all duration-300 ease-out ${
+                activityExpanded ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="lg:pl-5 flex flex-col gap-0 mt-0.5">
+                {[
+                  { id: 'myactivity', label: 'My Activity', href: '/community/activity', icon: '📋' },
+                  { id: 'liked', label: 'Liked', href: '/community/activity/liked', icon: '❤️' },
+                  { id: 'following', label: 'Following', href: '/community/activity/following', icon: '👥' },
+                ].map((sub) => (
+                  <button
+                    key={sub.id}
+                    onClick={() => router.push(sub.href)}
+                    className={`flex items-center gap-2.5 px-2 lg:px-3 py-2 rounded-lg transition-all text-sm bg-transparent border-none cursor-pointer font-inherit ${
+                      activeActivitySub === sub.id
+                        ? 'text-[#ffe1bd] font-semibold bg-white/10'
+                        : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-sm w-[18px] text-center">{sub.icon}</span>
+                    <span className="hidden lg:block leading-none">{sub.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mobile: Activity button that opens sub-menu */}
+            <button
+              className={`sm:hidden ${navBtnBaseClass} ${activeNav === 'activity' ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'}`}
+              style={{
+                width: 'var(--nav-btn-width)',
+                height: 'var(--nav-btn-height)',
+                fontSize: 'var(--nav-btn-font-size)',
+              }}
+              onClick={() => setShowMobileActivityMenu(true)}
+            >
+              <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
+                {activeNav === 'activity' ? <ActivityFilledIcon /> : <ActivityOutlineIcon />}
+              </span>
+              <span className="block sm:hidden leading-none tracking-tight">
+                Activity
+              </span>
+            </button>
 
             {/* Mobile Profile Switcher in the nav row */}
             <div className="contents sm:hidden">
               <ProfileSwitcher isMobile />
             </div>
           </div>
+
+          {/* Mobile Activity Sub-Menu (slide-up sheet) */}
+          {showMobileActivityMenu && (
+            <div
+              className="fixed inset-0 z-[1100] bg-black/60 backdrop-blur-sm animate-in fade-in duration-150 sm:hidden"
+              onClick={() => setShowMobileActivityMenu(false)}
+            >
+              <div
+                className="absolute bottom-[70px] left-0 right-0 bg-[#1a1a1a] rounded-t-2xl border-t border-white/10 p-4 pb-2 animate-in slide-in-from-bottom-4 duration-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />
+                <h3 className="text-base font-semibold text-white px-1 mb-3">Activity</h3>
+                {[
+                  { id: 'myactivity', label: 'My Activity', href: '/community/activity', icon: '📋' },
+                  { id: 'liked', label: 'Liked', href: '/community/activity/liked', icon: '❤️' },
+                  { id: 'following', label: 'Following', href: '/community/activity/following', icon: '👥' },
+                ].map((sub) => (
+                  <button
+                    key={sub.id}
+                    onClick={() => {
+                      router.push(sub.href);
+                      setShowMobileActivityMenu(false);
+                    }}
+                    className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-all text-[15px] bg-transparent border-none cursor-pointer font-inherit ${
+                      activeActivitySub === sub.id
+                        ? 'text-[#ffe1bd] font-semibold bg-white/10'
+                        : 'text-white/70 hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-lg">{sub.icon}</span>
+                    <span>{sub.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* ── Profile Switcher (bottom of sidebar) ── */}

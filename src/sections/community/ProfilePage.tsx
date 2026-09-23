@@ -7,12 +7,10 @@ import ThreadFeedSkeleton from './ThreadSkeleton';
 import FollowersModal from './FollowersModal';
 import EditProfileModal from './EditProfileModal';
 import CreatePetProfileModal from './CreatePetProfileModal';
-import { useGetProfileQuery } from '@/lib/store/services/usersApi';
-import { useGetPostsQuery } from '@/lib/store/services/postsApi';
-import { useGetUserRepostsQuery } from '@/lib/store/services/usersApi';
+import { useGetProfileQuery, useGetUserPostsQuery, useGetUserRepostsQuery, useGetUserSavedPostsQuery } from '@/lib/store/services/usersApi';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
 
-type ProfileTab = 'posts' | 'reposts';
+type ProfileTab = 'posts' | 'reposts' | 'saved';
 
 const AVATAR_COLORS = [
   '#f7941d',
@@ -78,14 +76,17 @@ function mapApiPostToThread(
     time: timeStr,
     liked: post.is_liked,
     reposted: isRepost ? true : post.is_reposted,
-    repostedBy: isRepost && profile ? profile.username : undefined,
+    isSaved: post.is_saved,
+    repostedBy: isRepost && profile ? profile.username : post.reposter?.username,
     quotedPost: post.quoted_post
       ? mapApiPostToThread(post.quoted_post, profile)
       : undefined,
     isOwn: !!isOwnPost,
-    authorId: post.author?.id,
+    authorId: post.author?.id ?? profile?.user_id,
     isFollowed: post.author?.is_followed,
-    isPetProfile: post.author?.profile_type === 'pet',
+    followerCount: post.author?.follower_count,
+    isPetProfile: post.author?.profile_type === 'pet' || profile?.profile_type === 'pet',
+    petType: post.author?.pet_type || profile?.pet_type,
   };
 }
 
@@ -100,24 +101,27 @@ export default function ProfilePage() {
     isLoading: profileLoading,
   } = useGetProfileQuery();
 
-  const { data: allPosts = [], isLoading: isPostsLoading } = useGetPostsQuery({ limit: 100, offset: 0 });
+  const { data: myPosts = [], isLoading: isPostsLoading } = useGetUserPostsQuery(
+    profile?.user_id ?? 0,
+    { skip: !profile?.user_id },
+  );
   const { data: reposts = [], isLoading: isRepostsLoading } = useGetUserRepostsQuery(
     profile?.user_id ?? 0,
     { skip: !profile?.user_id },
   );
-
-  /* Filter feed posts to only this user's posts */
-  const myPosts = profile
-    ? allPosts.filter((p) => p.author_id === profile.user_id)
-    : [];
+  const { data: saved = [], isLoading: isSavedLoading } = useGetUserSavedPostsQuery(
+    profile?.user_id ?? 0,
+    { skip: !profile?.user_id },
+  );
 
   const postsAsThreads = myPosts.map((p) => mapApiPostToThread(p, profile, false));
   const repostsAsThreads = reposts.map((p) => mapApiPostToThread(p, profile, true));
+  const savedAsThreads = saved.map((p) => mapApiPostToThread(p, profile, false));
 
   const currentList =
-    activeTab === 'posts' ? postsAsThreads : repostsAsThreads;
+    activeTab === 'posts' ? postsAsThreads : activeTab === 'reposts' ? repostsAsThreads : savedAsThreads;
 
-  const isListLoading = activeTab === 'posts' ? isPostsLoading : isRepostsLoading;
+  const isListLoading = activeTab === 'posts' ? isPostsLoading : activeTab === 'reposts' ? isRepostsLoading : isSavedLoading;
 
   if (profileLoading) {
     return (
@@ -243,7 +247,7 @@ export default function ProfilePage() {
 
         {/* ── Tabs ── */}
         <div className="flex relative border-b border-white/10 mb-0">
-          {(['posts', 'reposts'] as const).map((tab) => (
+          {(['posts', 'reposts', 'saved'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -252,17 +256,17 @@ export default function ProfilePage() {
                   : 'text-white/40 hover:text-white/60'
                 }`}
             >
-              {tab === 'posts' ? 'Posts' : 'Reposts'}
+              {tab === 'posts' ? 'Posts' : tab === 'reposts' ? 'Reposts' : 'Saved'}
             </button>
           ))}
           {/* Animated bottom border */}
           <div
-            className="absolute bottom-0 w-1/2 h-full pointer-events-none transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+            className="absolute bottom-0 w-1/3 h-full pointer-events-none transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
             style={{
-              transform: activeTab === 'posts' ? 'translateX(0%)' : 'translateX(100%)',
+              transform: activeTab === 'posts' ? 'translateX(0%)' : activeTab === 'reposts' ? 'translateX(100%)' : 'translateX(200%)',
             }}
           >
-            <div className="absolute -bottom-px left-0 right-0 h-[2px] bg-white rounded-t-sm" />
+            <div className="absolute bottom-0 left-0 w-full h-[3px] bg-white rounded-t-full" />
           </div>
         </div>
 

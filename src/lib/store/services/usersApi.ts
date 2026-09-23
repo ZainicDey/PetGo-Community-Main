@@ -15,6 +15,7 @@ interface CreateProfileBody {
   username: string;
   profile_type: 'user' | 'pet';
   gender?: string;
+  pet_type?: string;
   date_of_birth?: string;
   profile_picture_url?: string;
 }
@@ -23,6 +24,7 @@ export interface UpdateProfileBody {
   username?: string;
   profile_type?: 'user' | 'pet' | string;
   gender?: string;
+  pet_type?: string;
   date_of_birth?: string;
   profile_picture_url?: string;
 }
@@ -126,6 +128,17 @@ export const usersApi = api.injectEndpoints({
       query: (userId) => `/users/${userId}/likes`,
     }),
 
+    getUserSavedPosts: builder.query<ApiPost[], number>({
+      query: (userId) => `/users/${userId}/saved`,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Post' as const, id })),
+              { type: 'Post', id: 'LIST' },
+            ]
+          : [{ type: 'Post', id: 'LIST' }],
+    }),
+
     getUserActivity: builder.query<ActivityItem[], number>({
       query: (userId) => `/users/${userId}/activity`,
       providesTags: (result) =>
@@ -163,6 +176,16 @@ export const usersApi = api.injectEndpoints({
         { type: 'SwitchableProfiles', id: 'LIST' },
       ],
     }),
+
+    deletePetProfile: builder.mutation<void, void>({
+      query: () => ({ url: '/users/pet-profile', method: 'DELETE' }),
+      invalidatesTags: [
+        { type: 'User', id: 'ME' },
+        { type: 'Profile', id: 'ME' },
+        { type: 'SwitchableProfiles', id: 'LIST' },
+        { type: 'Post', id: 'LIST' },
+      ],
+    }),
   }),
 });
 
@@ -185,4 +208,6 @@ export const {
   useGetSwitchableProfilesQuery,
   useSwitchProfileMutation,
   useCreatePetProfileMutation,
+  useDeletePetProfileMutation,
+  useGetUserSavedPostsQuery,
 } = usersApi;
