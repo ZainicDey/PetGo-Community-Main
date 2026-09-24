@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useSyncExternalStore, startTransition } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -176,7 +176,7 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
       className="mt-2 mb-2 border border-white/10 rounded-2xl overflow-hidden bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer"
       onClick={(e) => {
         e.stopPropagation();
-        router.push(`/community/thread/${post.id}`);
+        startTransition(() => router.push(`/community/thread/${post.id}`));
       }}
     >
       <div className="px-4 pt-3 pb-1">
@@ -421,9 +421,9 @@ export default function ThreadCard({
         <div className="flex flex-col items-center gap-0 shrink-0">
           <div className="relative flex cursor-pointer" onClick={() => {
             if (thread.isOwn) {
-              router.push('/community/profile');
+              startTransition(() => router.push('/community/profile'));
             } else if (thread.authorId !== undefined) {
-              router.push(`/community/user/${thread.authorId}`);
+              startTransition(() => router.push(`/community/user/${thread.authorId}`));
             }
           }}>
             {thread.avatar ? (
@@ -469,9 +469,9 @@ export default function ThreadCard({
             className="text-[15px] font-semibold text-white flex items-center gap-1.5 cursor-pointer hover:underline"
             onClick={() => {
               if (thread.isOwn) {
-                router.push('/community/profile');
+                startTransition(() => router.push('/community/profile'));
               } else if (thread.authorId !== undefined) {
-                router.push(`/community/user/${thread.authorId}`);
+                startTransition(() => router.push(`/community/user/${thread.authorId}`));
               }
             }}
           >
@@ -564,7 +564,7 @@ export default function ThreadCard({
         {/* Content */}
         <p
           className="text-base font-extralight leading-relaxed text-white/95 mb-2.5 break-words tracking-wide cursor-pointer hover:text-white transition-colors"
-          onClick={() => router.push(`/community/thread/${thread.id}`)}
+          onClick={() => startTransition(() => router.push(`/community/thread/${thread.id}`))}
         >
           {thread.content}
         </p>
