@@ -206,21 +206,33 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 relative">
           <button
             onClick={onClose}
-            className="text-sm text-white/60 hover:text-white transition-colors cursor-pointer bg-transparent border-none"
+            className="text-sm text-white/60 hover:text-white transition-colors cursor-pointer bg-transparent border-none z-10"
           >
             Cancel
           </button>
-          <h2 className="text-base font-semibold text-white">Edit Profile</h2>
-          <button
-            onClick={handleSubmit as unknown as React.MouseEventHandler}
-            disabled={isLoading || isUploading}
-            className="text-sm font-semibold text-[#F7941D] hover:text-[#e8871a] transition-colors cursor-pointer bg-transparent border-none disabled:opacity-50"
-          >
-            {isLoading || isUploading ? 'Saving…' : 'Done'}
-          </button>
+          <h2 className="text-base font-semibold text-white absolute left-1/2 -translate-x-1/2">Edit Profile</h2>
+          <div className="flex items-center gap-3 z-10">
+            {profile?.profile_type?.toLowerCase() === 'pet' && (
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="text-white/40 hover:text-red-400 transition-colors cursor-pointer bg-transparent border-none p-1.5 rounded-full hover:bg-red-400/10 flex items-center justify-center"
+                title="Delete Pet Profile"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={handleSubmit as unknown as React.MouseEventHandler}
+              disabled={isLoading || isUploading}
+              className="text-sm font-semibold text-[#F7941D] hover:text-[#e8871a] transition-colors cursor-pointer bg-transparent border-none disabled:opacity-50"
+            >
+              {isLoading || isUploading ? 'Saving…' : 'Done'}
+            </button>
+          </div>
         </div>
 
         {/* Form */}
@@ -529,17 +541,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
               </div>
             )}
 
-            {/* Delete Pet Profile Button */}
-            {profile?.profile_type?.toLowerCase() === 'pet' && (
-              <button
-                type="button"
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="mt-2 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/40 active:scale-[0.98] cursor-pointer"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Pet Profile
-              </button>
-            )}
+
 
             {/* Spacer for dropdowns to avoid clipping in the scroll container */}
             {(isPetTypeOpen || isGenderOpen) && <div className="h-15" />}

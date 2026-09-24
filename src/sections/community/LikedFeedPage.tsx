@@ -77,25 +77,25 @@ export default function LikedFeedPage() {
       </div>
 
       {/* Content */}
-      {isLoading ? (
-        <ThreadFeedSkeleton />
-      ) : isError ? (
-        <div className="text-center py-16 text-white/40">Failed to load liked posts</div>
-      ) : threads.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-          <div className="text-5xl mb-4">❤️</div>
-          <h3 className="text-lg font-semibold text-white/70 mb-2">No liked posts yet</h3>
-          <p className="text-sm text-white/40 max-w-[300px]">
-            When you like a post, it will show up here so you can easily find it again.
-          </p>
-        </div>
-      ) : (
-        <div>
-          {threads.map((thread) => (
+      <div className="border-1 border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-4">
+        {isLoading ? (
+          <ThreadFeedSkeleton />
+        ) : isError ? (
+          <div className="text-center py-16 text-white/40">Failed to load liked posts</div>
+        ) : threads.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+            <div className="text-5xl mb-4">❤️</div>
+            <h3 className="text-lg font-semibold text-white/70 mb-2">No liked posts yet</h3>
+            <p className="text-sm text-white/40 max-w-[300px]">
+              When you like a post, it will show up here so you can easily find it again.
+            </p>
+          </div>
+        ) : (
+          threads.map((thread) => (
             <ThreadCard key={thread.id} thread={thread} />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }

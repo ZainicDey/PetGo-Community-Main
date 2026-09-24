@@ -36,6 +36,17 @@ export const postsApi = api.injectEndpoints({
           : [{ type: 'Post', id: 'LIST' }],
     }),
 
+    getFollowingFeed: builder.query<ApiPost[], void>({
+      query: () => '/feed/following',
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Post' as const, id })),
+              { type: 'Post', id: 'FOLLOWING_FEED' },
+            ]
+          : [{ type: 'Post', id: 'FOLLOWING_FEED' }],
+    }),
+
     getPostById: builder.query<ApiPost, number>({
       query: (postId) => `/posts/${postId}`,
       providesTags: (_r, _e, id) => [{ type: 'Post', id }],
@@ -149,6 +160,7 @@ export const postsApi = api.injectEndpoints({
 
 export const {
   useGetPostsQuery,
+  useGetFollowingFeedQuery,
   useGetPostByIdQuery,
   useCreatePostMutation,
   useDeletePostMutation,
