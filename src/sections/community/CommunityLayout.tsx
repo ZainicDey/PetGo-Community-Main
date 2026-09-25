@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import PetGoLogo from '@/assets/images/Logo_PetGo.png';
 import NewThreadModal from './NewThreadModal';
 import type { Thread } from './ThreadCard';
@@ -144,7 +144,7 @@ const ActivityFilledIcon = () => (
   </svg>
 );
 
-/* 
+
 const ProfileOutlineIcon = () => (
   <svg
     aria-label="Profile"
@@ -186,7 +186,7 @@ const ProfileFilledIcon = () => (
     />
   </svg>
 );
-*/
+
 
 const navItems = [
   {
@@ -217,13 +217,13 @@ const navItems = [
     OutlineIcon: ActivityOutlineIcon,
     FilledIcon: ActivityFilledIcon,
   },
-  /* {
+  {
     id: 'profile',
     label: 'Profile',
     href: '/community/profile',
     OutlineIcon: ProfileOutlineIcon,
     FilledIcon: ProfileFilledIcon,
-  }, */
+  },
 ];
 
 interface CommunityLayoutProps {
@@ -231,7 +231,7 @@ interface CommunityLayoutProps {
 }
 
 const navBtnBaseClass =
-  'flex flex-col sm:flex-row items-center justify-center lg:justify-start lg:pl-2 gap-0.5 sm:gap-0 lg:gap-2.5 rounded-md sm:rounded-lg transition-all hover:bg-white/10 hover:text-[#ffe1bd] sm:hover:translate-x-0.5 select-none cursor-pointer bg-transparent border-none font-inherit mx-auto lg:mx-0 p-1 sm:p-0';
+  'flex flex-col sm:flex-row items-center justify-center lg:justify-start lg:pl-2 gap-0.5 sm:gap-0 lg:gap-2.5 rounded-md sm:rounded-lg transition-all hover:bg-white/5 hover:text-white/90 select-none cursor-pointer bg-transparent border-none font-inherit mx-auto lg:mx-0 p-1 sm:p-0';
 
 export default function CommunityLayout({ children }: CommunityLayoutProps) {
   const [showNewThread, setShowNewThread] = useState(false);
@@ -254,9 +254,11 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
     ? 'liked'
     : pathname === '/community/activity/following'
       ? 'following'
-      : pathname === '/community/activity'
-        ? 'myactivity'
-        : null;
+      : pathname === '/community/activity/saved'
+        ? 'saved'
+        : pathname === '/community/activity'
+          ? 'myactivity'
+          : null;
 
   React.useEffect(() => {
     const handleOpenModal = () => setShowNewThread(true);
@@ -394,23 +396,29 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
             </button>
 
             {/* Desktop: Sub-items (always visible) */}
-            <div className="hidden sm:block">
-              <div className="lg:pl-5 flex flex-col gap-0 mt-0.5">
+            <div className="hidden lg:block">
+              <div className="flex flex-col gap-0 mt-0.5 mx-0">
                 {[
                   { id: 'myactivity', label: 'My Activity', href: '/community/activity' },
                   { id: 'liked', label: 'Liked', href: '/community/activity/liked' },
                   { id: 'following', label: 'Following', href: '/community/activity/following' },
+                  { id: 'saved', label: 'Saved', href: '/community/activity/saved' },
                 ].map((sub) => (
                   <button
                     key={sub.id}
                     onClick={() => router.push(sub.href)}
-                    className={`flex items-center gap-2.5 px-2 lg:px-3 py-2 rounded-lg transition-all text-sm bg-transparent border-none cursor-pointer font-inherit ${
+                    className={`flex items-center justify-start lg:pl-12 rounded-lg transition-all bg-transparent border-none cursor-pointer font-inherit p-0 ${
                       activeActivitySub === sub.id
                         ? 'text-[#ffe1bd] font-semibold bg-white/10'
                         : 'text-white/60 hover:text-white/90 hover:bg-white/5'
                     }`}
+                    style={{
+                      width: 'var(--nav-btn-width)',
+                      height: 'var(--nav-btn-height)',
+                      fontSize: 'var(--nav-btn-font-size)',
+                    }}
                   >
-                    <span className="hidden lg:block leading-none">{sub.label}</span>
+                    <span className="leading-none tracking-tight">{sub.label}</span>
                   </button>
                 ))}
               </div>
@@ -439,6 +447,32 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
               <ProfileSwitcher isMobile />
             </div>
           </div>
+
+          {/* Profile */}
+          {navItems.slice(3, 4).map((item) => {
+            const isActive = activeNav === item.id;
+            const Icon = isActive ? item.FilledIcon : item.OutlineIcon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => router.push(item.href)}
+                className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'} sm:mt-6`}
+                style={{
+                  width: 'var(--nav-btn-width)',
+                  height: 'var(--nav-btn-height)',
+                  fontSize: 'var(--nav-btn-font-size)',
+                }}
+                id={`community-nav-${item.id}`}
+              >
+                <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
+                  <Icon />
+                </span>
+                <span className="block sm:hidden lg:block leading-none tracking-tight">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
         {/* ── Profile Switcher (bottom of sidebar) ── */}

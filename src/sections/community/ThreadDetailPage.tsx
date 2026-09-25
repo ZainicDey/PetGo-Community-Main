@@ -1137,13 +1137,13 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                   {thread.media.map((item, idx) => (
                     <CarouselItem
                       key={idx}
-                      className={`pl-2 ${thread.media!.length === 1 ? 'basis-full' : 'basis-[75%] sm:basis-[240px]'}`}
+                      className={`pl-2 ${thread.media!.length === 1 ? 'basis-full' : 'basis-auto'}`}
                     >
                       {item.type === 'video' ? (
                         <video
                           src={item.url}
                           controls
-                          className={`rounded-xl object-cover shrink-0 select-none ${thread.media!.length === 1 ? 'w-full max-h-[380px]' : 'w-full h-[320px]'}`}
+                          className={`rounded-xl shrink-0 select-none w-auto ${thread.media!.length === 1 ? 'h-auto max-w-full max-h-[380px]' : 'h-[280px] sm:h-[320px] max-w-none'}`}
                         />
                       ) : (
                         <Image
@@ -1160,7 +1160,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                             }
                             setSelectedMedia(item);
                           }}
-                          className={`rounded-xl object-cover shrink-0 select-none cursor-pointer ${thread.media!.length === 1 ? 'w-full max-h-[380px]' : 'w-full h-[320px]'}`}
+                          className={`rounded-xl shrink-0 select-none cursor-pointer w-auto ${thread.media!.length === 1 ? 'h-auto max-w-full max-h-[380px]' : 'h-[280px] sm:h-[320px] max-w-none'}`}
                         />
                       )}
                     </CarouselItem>

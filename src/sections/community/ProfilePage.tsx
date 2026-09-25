@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PawPrint } from 'lucide-react';
+import { PawPrint, Camera, Loader2 } from 'lucide-react';
 import ThreadCard, { type Thread } from './ThreadCard';
 import ThreadFeedSkeleton from './ThreadSkeleton';
 import FollowersModal from './FollowersModal';
 import EditProfileModal from './EditProfileModal';
 import CreatePetProfileModal from './CreatePetProfileModal';
-import { useGetProfileQuery, useGetUserPostsQuery, useGetUserRepostsQuery, useGetUserSavedPostsQuery } from '@/lib/store/services/usersApi';
+import { useGetProfileQuery, useGetUserPostsQuery, useGetUserRepostsQuery, useGetUserSavedPostsQuery, useUpdateProfileMutation } from '@/lib/store/services/usersApi';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
 
 type ProfileTab = 'posts' | 'reposts' | 'saved';
@@ -95,11 +95,51 @@ export default function ProfilePage() {
   const [showFollowers, setShowFollowers] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showCreatePet, setShowCreatePet] = useState(false);
+  const [isUploadingPfp, setIsUploadingPfp] = useState(false);
 
   const {
     data: profile,
     isLoading: profileLoading,
   } = useGetProfileQuery();
+
+  const [updateProfile] = useUpdateProfileMutation();
+
+  const handleQuickPfpUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'petgo_preset';
+
+    if (!cloudName) {
+      alert('Cloudinary is not configured. Please add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME to .env.local.');
+      return;
+    }
+
+    setIsUploadingPfp(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: 'POST', body: formData },
+      );
+
+      if (!uploadRes.ok) throw new Error('Failed to upload image');
+
+      const uploadData = await uploadRes.json();
+      
+      await updateProfile({ profile_picture_url: uploadData.secure_url }).unwrap();
+    } catch (err) {
+      console.error('Quick PFP upload error:', err);
+      alert('Failed to update profile picture. Please try again.');
+    } finally {
+      setIsUploadingPfp(false);
+      e.target.value = '';
+    }
+  };
 
   const { data: myPosts = [], isLoading: isPostsLoading } = useGetUserPostsQuery(
     profile?.user_id ?? 0,
@@ -185,26 +225,47 @@ export default function ProfilePage() {
                 @{profile.username}
               </p>
             </div>
-            <div
-              className="w-[76px] h-[76px] rounded-full overflow-hidden shrink-0 border-2 border-white/10 flex items-center justify-center"
-              style={
-                !profile.profile_picture_url
-                  ? { backgroundColor: avatarBg }
-                  : undefined
-              }
-            >
-              {profile.profile_picture_url ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={profile.profile_picture_url}
-                  alt={profile.username}
-                  className="w-full h-full object-cover"
+            <div className="relative shrink-0">
+              <div
+                className="w-[76px] h-[76px] rounded-full overflow-hidden border-2 border-white/10 flex items-center justify-center"
+                style={
+                  !profile.profile_picture_url
+                    ? { backgroundColor: avatarBg }
+                    : undefined
+                }
+              >
+                {profile.profile_picture_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={profile.profile_picture_url}
+                    alt={profile.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-white">
+                    {initials}
+                  </span>
+                )}
+              </div>
+              <label 
+                htmlFor="profile-picture-upload-quick"
+                className="absolute bottom-0 right-0 w-7 h-7 bg-[#282828] border border-white/20 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/20 transition-colors shadow-md"
+                title="Change Profile Picture"
+              >
+                {isUploadingPfp ? (
+                  <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5 text-white" />
+                )}
+                <input
+                  id="profile-picture-upload-quick"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleQuickPfpUpload}
+                  disabled={isUploadingPfp}
                 />
-              ) : (
-                <span className="text-2xl font-bold text-white">
-                  {initials}
-                </span>
-              )}
+              </label>
             </div>
           </div>
 

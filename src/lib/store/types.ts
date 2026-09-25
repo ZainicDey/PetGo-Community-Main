@@ -60,6 +60,8 @@ export interface UserBasicInfo {
   id: number;
   username: string;
   profile_picture_url?: string;
+  profile_type?: string;
+  pet_type?: string;
 }
 
 export interface LikeResponse {

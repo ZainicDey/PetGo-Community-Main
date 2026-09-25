@@ -215,16 +215,6 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           </button>
           <h2 className="text-base font-semibold text-white absolute left-1/2 -translate-x-1/2">Edit Profile</h2>
           <div className="flex items-center gap-3 z-10">
-            {profile?.profile_type?.toLowerCase() === 'pet' && (
-              <button
-                type="button"
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="text-white/40 hover:text-red-400 transition-colors cursor-pointer bg-transparent border-none p-1.5 rounded-full hover:bg-red-400/10 flex items-center justify-center"
-                title="Delete Pet Profile"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
             <button
               onClick={handleSubmit as unknown as React.MouseEventHandler}
               disabled={isLoading || isUploading}
@@ -243,7 +233,17 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
             id="edit-profile-form"
           >
             {/* Profile Picture */}
-            <div className="flex flex-col items-center justify-center mb-2">
+            <div className="relative flex flex-col items-center justify-center mb-2">
+              {profile?.profile_type?.toLowerCase() === 'pet' && (
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="absolute left-0 top-0 text-white/40 hover:text-red-400 transition-colors cursor-pointer bg-transparent border-none p-2 rounded-full hover:bg-red-400/10 flex items-center justify-center"
+                  title="Delete Pet Profile"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
               <label
                 htmlFor="edit-profile-picture-upload"
                 className="cursor-pointer group relative"

@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useGetMeQuery, useGetUserActivityQuery } from '@/lib/store/services/usersApi';
+import { useGetMeQuery, useGetUserActivityQuery, useGetProfileQuery } from '@/lib/store/services/usersApi';
 import { useUnlikePostMutation, useUndoRepostMutation } from '@/lib/store/services/postsApi';
+import type { ApiPost, ApiProfile } from '@/lib/store/types';
 
 function formatRelativeTime(dateString: string) {
   const safeDate = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
@@ -21,13 +22,18 @@ function formatRelativeTime(dateString: string) {
   return timeStr;
 }
 
+
+
 export default function ActivityPage() {
   const router = useRouter();
+  
   const { data: me } = useGetMeQuery();
-  const { data: activityList, isLoading, isError } = useGetUserActivityQuery(me?.id as number, {
+  const { data: profile } = useGetProfileQuery();
+
+  const { data: activityList, isLoading: isActivityLoading, isError: isActivityError } = useGetUserActivityQuery(me?.id as number, {
     skip: !me?.id,
   });
-  
+
   const [unlikePost] = useUnlikePostMutation();
   const [undoRepost] = useUndoRepostMutation();
 
@@ -51,8 +57,8 @@ export default function ActivityPage() {
   return (
     <div className="max-w-[680px] mx-auto px-4 pb-20 pt-5">
       <h1 className="text-2xl font-semibold mb-6">Activity</h1>
-      
-      {isLoading ? (
+
+      {isActivityLoading ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
@@ -70,7 +76,7 @@ export default function ActivityPage() {
             </div>
           ))}
         </div>
-      ) : isError ? (
+      ) : isActivityError ? (
         <div className="text-center py-16 text-white/40">Failed to load activity</div>
       ) : !activityList || activityList.length === 0 ? (
         <div className="text-center py-16 text-white/40">No activity yet</div>

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import { ImagePlus, X, ChevronDown } from 'lucide-react';
 import { useGetProfileQuery } from '@/lib/store/services/usersApi';
 import type { Thread } from './ThreadCard';
 
@@ -13,10 +14,26 @@ interface NewThreadModalProps {
 
 const MAX_CHARS = 500;
 
+const AUDIENCE_OPTIONS = [
+  { value: 'anyone', label: 'Anyone' },
+  { value: 'followers', label: 'Your followers' },
+] as const;
+
+/* GIF icon (inline SVG since lucide doesn't have a dedicated GIF icon) */
+const GifIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <text x="12" y="15" textAnchor="middle" fill="currentColor" stroke="none" fontSize="8" fontWeight="700" fontFamily="sans-serif">GIF</text>
+  </svg>
+);
+
 export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThreadModalProps) {
   const [text, setText] = useState('');
   const [filesData, setFilesData] = useState<{ file: File; url: string; type: string }[]>([]);
+  const [audience, setAudience] = useState<'anyone' | 'followers'>('anyone');
+  const [isAudienceOpen, setIsAudienceOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: profile } = useGetProfileQuery();
   const avatarUrl = profile?.profile_picture_url;
@@ -29,6 +46,15 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
       filesData.forEach((data) => URL.revokeObjectURL(data.url));
     };
   }, [filesData]);
+
+  /* Auto-grow textarea */
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [text]);
 
   const handlePost = async () => {
     if (!text.trim() && filesData.length === 0 && !quotedThread) return;
@@ -59,163 +85,237 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
     if (e.target === e.currentTarget) onClose();
   };
 
-  const remaining = MAX_CHARS - text.length;
+  const canPost = text.trim().length > 0 || filesData.length > 0 || !!quotedThread;
+
+
 
   return (
     <div
-      className="fixed inset-0 z-[2000] bg-black/75 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[2000] bg-black/70 flex items-center justify-center backdrop-blur-sm"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
       aria-label="New thread"
     >
-      <div className="bg-[#1e1e1e] rounded-[20px] w-full max-w-[540px] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.6)] border border-white/10 animate-in slide-in-from-bottom-4 zoom-in-95 duration-250">
+      <div
+        className="relative w-full max-w-[540px] max-h-[90vh] bg-[#181818] border border-white/10 rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <span className="text-base font-semibold text-white">{quotedThread ? 'Quote post' : 'New thread'}</span>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <button
-            className="bg-transparent border-none text-white/50 cursor-pointer p-1.5 rounded-full flex items-center justify-center transition-colors hover:bg-white/10 hover:text-white font-inherit"
             onClick={onClose}
-            aria-label="Close"
+            className="text-[15px] text-white/60 hover:text-white transition-colors cursor-pointer bg-transparent border-none min-w-[60px] text-left"
             id="community-modal-close-btn"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            Cancel
           </button>
+          <h2 className="text-[15px] font-bold text-white">
+            {quotedThread ? 'Quote post' : 'New thread'}
+          </h2>
+          <div className="min-w-[60px]" />
         </div>
 
         {/* Body */}
-        <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center shrink-0 text-white overflow-hidden">
-            {avatarUrl ? (
-              <Image src={avatarUrl} alt="Your avatar" width={40} height={40} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-base font-bold text-white/70">{initials}</span>
-            )}
-          </div>
-          <div className="flex-1 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">{username}</span>
-              {!quotedThread && (
-                <button
-                  className="bg-transparent border-none cursor-pointer text-white/50 hover:text-white transition-colors p-1"
-                  onClick={() => fileInputRef.current?.click()}
-                  aria-label="Add media"
-                >
-                  <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 121.86 122.88" className="w-5 h-5 fill-current" xmlSpace="preserve">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M72.09,18.72h42.37c2.05,0,3.89,0.84,5.22,2.18c1.34,1.34,2.18,3.2,2.18,5.22v89.36 c0,2.05-0.84,3.89-2.18,5.22c-1.34,1.34-3.2,2.18-5.22,2.18H24.48c-2.05,0-3.89-0.84-5.22-2.18c-1.34-1.34-2.18-3.2-2.18-5.22 V71.46c2.47,1,5.05,1.78,7.72,2.29v20.28h0.03l0,0C37.72,81.7,46.26,75.61,59.08,65.2c0.05,0.05,0.1,0.1,0.15,0.15 c0.03,0.03,0.03,0.06,0.06,0.06l26.82,31.73l4.1-25.24c0.28-1.62,1.8-2.73,3.42-2.45c0.62,0.09,1.18,0.4,1.62,0.81l18.82,19.77 V27.91c0-0.4-0.16-0.75-0.44-0.99c-0.25-0.25-0.62-0.44-0.99-0.44H74.05C73.64,23.8,72.98,21.21,72.09,18.72L72.09,18.72z M32.79,0 C50.9,0,65.58,14.68,65.58,32.79c0,18.11-14.68,32.79-32.79,32.79C14.68,65.58,0,50.9,0,32.79C0,14.68,14.68,0,32.79,0L32.79,0z M15.37,33.37h11.04v15.76h12.45V33.37h11.36L32.8,16.44L15.37,33.37L15.37,33.37L15.37,33.37z M94.27,35.66 c2.95,0,5.66,1.21,7.58,3.14c1.96,1.96,3.14,4.63,3.14,7.59c0,2.95-1.21,5.66-3.14,7.58c-1.96,1.96-4.63,3.14-7.58,3.14 c-2.95,0-5.66-1.21-7.59-3.14c-1.96-1.96-3.14-4.63-3.14-7.58c0-2.95,1.21-5.65,3.14-7.59C88.65,36.84,91.32,35.66,94.27,35.66 L94.27,35.66L94.27,35.66z"/>
-                  </svg>
-                </button>
-              )}
-            </div>
-            <textarea
-              id="community-new-thread-textarea"
-              className="w-full bg-transparent border-none outline-none text-white/85 text-[15px] font-light resize-none leading-relaxed min-h-[100px] placeholder:text-white/30"
-              placeholder="Start a thread..."
-              value={text}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_CHARS) setText(e.target.value);
-              }}
-              autoFocus
-              rows={4}
-            />
-            {/* Media Previews */}
-            {filesData.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {filesData.map((data, index) => (
-                  <div key={index} className="relative group rounded-xl overflow-hidden bg-white/5 border border-white/10">
-                    {data.type === 'video' ? (
-                      <video src={data.url} className="h-32 w-auto object-contain" />
-                    ) : (
-                      <Image src={data.url} alt="Preview" width={120} height={120} className="h-32 w-auto object-cover" unoptimized />
-                    )}
-                    <button
-                      onClick={() => removeFile(index)}
-                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-none cursor-pointer"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Quoted post preview */}
-            {quotedThread && (
-              <div className="mt-3 border border-white/10 rounded-2xl overflow-hidden bg-white/[0.02]">
-                <div className="px-4 pt-3 pb-2">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    {quotedThread.avatar ? (
-                      <Image
-                        src={quotedThread.avatar}
-                        alt={quotedThread.author}
-                        width={20}
-                        height={20}
-                        className="w-5 h-5 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-[#f7941d]/70 shrink-0"
-                      >
-                        {quotedThread.author[0]?.toUpperCase() ?? '?'}
-                      </div>
-                    )}
-                    <span className="text-[13px] font-semibold text-white">{quotedThread.author}</span>
-                    <span className="text-[13px] text-white/35">{quotedThread.time}</span>
-                  </div>
-                  {quotedThread.content && (
-                    <p className="text-[14px] font-extralight leading-relaxed text-white/75 break-words line-clamp-3">
-                      {quotedThread.content}
-                    </p>
-                  )}
-                </div>
-                {quotedThread.media && quotedThread.media.length > 0 && (
-                  <div className="px-4 pb-3 pt-1">
-                    {quotedThread.media[0].type === 'video' ? (
-                      <video
-                        src={quotedThread.media[0].url}
-                        className="w-full max-h-[380px] rounded-xl object-cover"
-                      />
-                    ) : (
-                      <Image
-                        src={quotedThread.media[0].url}
-                        alt="Quoted media"
-                        width={680}
-                        height={380}
-                        unoptimized
-                        className="w-full max-h-[380px] rounded-xl object-cover"
-                      />
-                    )}
-                  </div>
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-5 py-4">
+          {/* Avatar + compose area */}
+          <div className="flex gap-3">
+            {/* Avatar column with thread line */}
+            <div className="flex flex-col items-center shrink-0">
+              <div className="w-10 h-10 rounded-full bg-[#242424] flex items-center justify-center overflow-hidden">
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt="Your avatar" width={40} height={40} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm font-bold text-white/60">{initials}</span>
                 )}
               </div>
+              {/* Thread line */}
+              <div className="w-0.5 flex-1 min-h-[24px] bg-white/10 rounded-full mt-2" />
+            </div>
+
+            {/* Compose area */}
+            <div className="flex-1 flex flex-col min-w-0 pt-0.5">
+              <span className="text-[15px] font-semibold text-white">{username}</span>
+              <textarea
+                ref={textareaRef}
+                id="community-new-thread-textarea"
+                className="w-full bg-transparent border-none outline-none text-white/90 text-[15px] font-light resize-none leading-relaxed min-h-[44px] placeholder:text-white/35 mt-0.5"
+                placeholder="What's new?"
+                value={text}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_CHARS) setText(e.target.value);
+                }}
+                autoFocus
+              />
+
+              {/* Media Previews */}
+              {filesData.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {filesData.map((data, index) => (
+                    <div key={index} className="relative group rounded-xl overflow-hidden bg-white/5 border border-white/10">
+                      {data.type === 'video' ? (
+                        <video src={data.url} className="h-32 w-auto object-contain" />
+                      ) : (
+                        <Image src={data.url} alt="Preview" width={120} height={120} className="h-32 w-auto object-cover" unoptimized />
+                      )}
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-none cursor-pointer hover:bg-black/90"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Quoted post preview */}
+              {quotedThread && (
+                <div className="mt-3 border border-white/10 rounded-2xl overflow-hidden bg-white/[0.02]">
+                  <div className="px-4 pt-3 pb-2">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {quotedThread.avatar ? (
+                        <Image
+                          src={quotedThread.avatar}
+                          alt={quotedThread.author}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-[#f7941d]/70 shrink-0"
+                        >
+                          {quotedThread.author[0]?.toUpperCase() ?? '?'}
+                        </div>
+                      )}
+                      <span className="text-[13px] font-semibold text-white">{quotedThread.author}</span>
+                      <span className="text-[13px] text-white/35">{quotedThread.time}</span>
+                    </div>
+                    {quotedThread.content && (
+                      <p className="text-[14px] font-extralight leading-relaxed text-white/75 break-words line-clamp-3">
+                        {quotedThread.content}
+                      </p>
+                    )}
+                  </div>
+                  {quotedThread.media && quotedThread.media.length > 0 && (
+                    <div className="px-4 pb-3 pt-1">
+                      {quotedThread.media[0].type === 'video' ? (
+                        <video
+                          src={quotedThread.media[0].url}
+                          className="w-full max-h-[380px] rounded-xl object-cover"
+                        />
+                      ) : (
+                        <Image
+                          src={quotedThread.media[0].url}
+                          alt="Quoted media"
+                          width={680}
+                          height={380}
+                          unoptimized
+                          className="w-full max-h-[380px] rounded-xl object-cover"
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* Faded avatar + media buttons row */}
+          <div className="flex items-center gap-3 mt-2">
+            <div className="w-10 flex justify-center shrink-0">
+              <div className="w-5 h-5 rounded-full bg-[#242424] flex items-center justify-center overflow-hidden opacity-40">
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt="" width={20} height={20} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[9px] font-bold text-white/60">{initials}</span>
+                )}
+              </div>
+            </div>
+            {!quotedThread && (
+              <div className="flex items-center gap-0.5">
+                <button
+                  className="p-1.5 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all bg-transparent border-none cursor-pointer"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.accept = 'image/*,video/*';
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  aria-label="Add media"
+                >
+                  <ImagePlus className="w-[18px] h-[18px]" />
+                </button>
+                <button
+                  className="p-1.5 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all bg-transparent border-none cursor-pointer"
+                  aria-label="Add GIF"
+                >
+                  <GifIcon />
+                </button>
+              </div>
             )}
           </div>
+
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            multiple
+            accept="image/*,video/*"
+            className="hidden"
+          />
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-5 pt-4 border-t border-white/5">
-          <div className="flex items-center gap-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              multiple
-              accept="image/*,video/*"
-              className="hidden"
-            />
-            <span className="text-xs text-white/30">
-              {remaining < 100 ? `${remaining} remaining` : ''}
-            </span>
+        <div className="flex items-center justify-between px-5 py-3 border-t border-white/10">
+          {/* Post Options dropdown */}
+          <div className="relative">
+            <button
+              className="flex items-center gap-1.5 text-[13px] text-white/40 hover:text-white/60 transition-colors bg-transparent border-none cursor-pointer"
+              onClick={() => setIsAudienceOpen(!isAudienceOpen)}
+              type="button"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12h8M12 8v8" />
+              </svg>
+              <span>{AUDIENCE_OPTIONS.find(o => o.value === audience)?.label ?? 'Anyone'} can reply</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isAudienceOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isAudienceOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsAudienceOpen(false)} />
+                <div className="absolute bottom-full left-0 mb-2 w-[180px] bg-[#242424] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 py-1">
+                  {AUDIENCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setAudience(opt.value);
+                        setIsAudienceOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/5 bg-transparent border-none cursor-pointer ${
+                        audience === opt.value ? 'text-[#F7941D] bg-[#F7941D]/10' : 'text-white/80'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Post button */}
           <button
             id="community-post-thread-btn"
-            className="bg-white text-black border-none rounded-full py-2.5 px-5.5 text-sm font-bold cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:opacity-85 hover:not-disabled:scale-[1.02] font-inherit"
             onClick={handlePost}
-            disabled={!text.trim() && filesData.length === 0 && !quotedThread}
+            disabled={!canPost}
+            className="bg-white/10 text-white border border-white/10 rounded-full py-1.5 px-5 text-sm font-semibold cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-white enabled:hover:text-black"
           >
             {quotedThread && !text.trim() ? 'Repost' : 'Post'}
           </button>

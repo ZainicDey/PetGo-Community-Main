@@ -154,6 +154,17 @@ export const usersApi = api.injectEndpoints({
       query: (q) => `/search/users?q=${encodeURIComponent(q)}`,
     }),
 
+    searchPosts: builder.query<ApiPost[], string>({
+      query: (q) => `/search/posts?q=${encodeURIComponent(q)}`,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Post' as const, id })),
+              { type: 'Post', id: 'SEARCH' },
+            ]
+          : [{ type: 'Post', id: 'SEARCH' }],
+    }),
+
     /* ── Pet Profile Switching ── */
     getSwitchableProfiles: builder.query<SwitchableProfilesResponse, void>({
       query: () => '/users/switchable-profiles',
@@ -205,6 +216,7 @@ export const {
   useGetUserLikesQuery,
   useGetUserActivityQuery,
   useSearchUsersQuery,
+  useSearchPostsQuery,
   useGetSwitchableProfilesQuery,
   useSwitchProfileMutation,
   useCreatePetProfileMutation,

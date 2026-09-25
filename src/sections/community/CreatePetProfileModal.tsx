@@ -341,7 +341,7 @@ export default function CreatePetProfileModal({
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsPetTypeOpen(false)} />
                     <div className="absolute top-full left-0 w-full mt-2 bg-[#181818] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 py-1">
-                      {['dog', 'cat', 'fish', 'other'].map((type) => (
+                      {['dog', 'cat', 'fish', 'bird', 'other'].map((type) => (
                         <button
                           key={type}
                           type="button"
