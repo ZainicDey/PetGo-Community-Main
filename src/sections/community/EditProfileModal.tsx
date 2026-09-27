@@ -198,11 +198,12 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[2000] bg-black/70 sm:flex sm:items-center sm:justify-center sm:backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[460px] max-h-[90vh] bg-[#181818] border border-white/10 rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="absolute bottom-0 left-0 right-0 sm:relative sm:bottom-auto sm:left-auto sm:right-auto w-full h-full sm:h-auto sm:max-w-[460px] sm:max-h-[90vh] bg-[#181818] sm:border sm:border-white/10 rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden sm:animate-in sm:fade-in sm:zoom-in-95 sm:duration-200"
+        style={{ animation: 'slideUpModal 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
