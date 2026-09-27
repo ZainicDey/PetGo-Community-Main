@@ -69,10 +69,13 @@ export default function SavedPage() {
   const savedAsThreads = savedPosts.map((p) => mapApiPostToThread(p, profile));
 
   return (
-    <div className="max-w-[680px] mx-auto px-4 pb-20 pt-5">
-      <h1 className="text-2xl font-semibold mb-6">Saved</h1>
+    <div className="max-w-[680px] mx-auto pb-20">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-[#101010]/80 backdrop-blur-xl border-b border-white/5 px-5 max-sm:px-4 py-4 max-sm:py-2.5">
+        <h1 className="text-xl max-sm:text-lg font-bold text-white m-0">Saved</h1>
+      </div>
 
-      <div className="border-1 border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden">
+      <div className="border border-white/4 max-sm:border-0 rounded-3xl max-sm:rounded-none bg-[#181818]/70 max-sm:bg-transparent backdrop-blur-2xl max-sm:backdrop-blur-none shadow-[0_8px_32px_rgba(255,255,255,0.022)] max-sm:shadow-none overflow-hidden mt-4 max-sm:mt-0">
         {isSavedLoading ? (
           <ThreadFeedSkeleton />
         ) : savedAsThreads.length === 0 ? (

@@ -55,63 +55,73 @@ export default function ActivityPage() {
   };
 
   return (
-    <div className="max-w-[680px] mx-auto px-4 pb-20 pt-5">
-      <h1 className="text-2xl font-semibold mb-6">Activity</h1>
+    <div className="max-w-[680px] mx-auto pb-20">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-[#101010]/80 backdrop-blur-xl border-b border-white/5 px-5 max-sm:px-4 py-4 max-sm:py-2.5">
+        <h1 className="text-xl max-sm:text-lg font-bold text-white m-0">Activity</h1>
+      </div>
 
-      {isActivityLoading ? (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between bg-[#181818]/70 backdrop-blur-2xl p-4 rounded-2xl border border-white/5 animate-pulse"
-            >
-              <div className="flex items-center gap-4 overflow-hidden w-full">
-                <div className="w-5 h-5 rounded-sm bg-white/10 shrink-0" />
-                <div className="flex flex-col gap-2.5 w-full">
-                  <div className="h-3.5 bg-white/10 rounded w-1/3" />
-                  <div className="h-4 bg-white/10 rounded w-3/4" />
-                </div>
-              </div>
-              <div className="shrink-0 ml-4 w-[72px] h-[30px] rounded-full bg-white/10" />
-            </div>
-          ))}
-        </div>
-      ) : isActivityError ? (
-        <div className="text-center py-16 text-white/40">Failed to load activity</div>
-      ) : !activityList || activityList.length === 0 ? (
-        <div className="text-center py-16 text-white/40">No activity yet</div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {activityList.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between bg-[#181818]/70 backdrop-blur-2xl p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
-              onClick={() => handleRowClick(item.post.id)}
-            >
-              <div className="flex items-center gap-4 overflow-hidden">
-                <div className="text-xl shrink-0">
-                  {item.type === 'like' ? '❤️' : '🔁'}
-                </div>
-                <div className="flex flex-col overflow-hidden">
-                  <div className="text-sm font-medium text-white/80">
-                    You {item.type}d a post
-                    <span className="text-white/40 ml-2 text-xs">· {formatRelativeTime(item.timestamp)}</span>
-                  </div>
-                  <div className="text-base text-white truncate mt-1">
-                    {item.post.content || 'Media post'}
-                  </div>
-                </div>
-              </div>
-              <button
-                className="shrink-0 ml-4 px-3 py-1.5 text-xs font-semibold text-white/60 bg-transparent border border-white/20 rounded-full hover:text-white hover:border-white/40 hover:bg-white/5 transition-colors"
-                onClick={(e) => handleRemove(e, item.type, item.post.id)}
+      <div className="border border-white/4 max-sm:border-0 rounded-3xl max-sm:rounded-none bg-[#181818]/70 max-sm:bg-transparent backdrop-blur-2xl max-sm:backdrop-blur-none shadow-[0_8px_32px_rgba(255,255,255,0.022)] max-sm:shadow-none overflow-hidden mt-4 max-sm:mt-0">
+        {isActivityLoading ? (
+          <div className="flex flex-col">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 border-b border-white/5 last:border-b-0 animate-pulse"
               >
-                Remove
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+                <div className="flex items-center gap-4 overflow-hidden w-full">
+                  <div className="w-5 h-5 rounded-sm bg-white/10 shrink-0" />
+                  <div className="flex flex-col gap-2.5 w-full">
+                    <div className="h-3.5 bg-white/10 rounded w-1/3" />
+                    <div className="h-4 bg-white/10 rounded w-3/4" />
+                  </div>
+                </div>
+                <div className="shrink-0 ml-4 w-[72px] h-[30px] rounded-full bg-white/10" />
+              </div>
+            ))}
+          </div>
+        ) : isActivityError ? (
+          <div className="text-center py-16 text-white/40">Failed to load activity</div>
+        ) : !activityList || activityList.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-white/30">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 opacity-40">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+            <p className="text-sm">No activity yet</p>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {activityList.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-4 py-4.5 border-b border-white/5 last:border-b-0 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                onClick={() => handleRowClick(item.post.id)}
+              >
+                <div className="flex items-center gap-4 overflow-hidden">
+                  <div className="text-xl shrink-0">
+                    {item.type === 'like' ? '❤️' : '🔁'}
+                  </div>
+                  <div className="flex flex-col overflow-hidden">
+                    <div className="text-sm font-medium text-white/80">
+                      You {item.type}d a post
+                      <span className="text-white/40 ml-2 text-xs">· {formatRelativeTime(item.timestamp)}</span>
+                    </div>
+                    <div className="text-base text-white truncate mt-1">
+                      {item.post.content || 'Media post'}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="shrink-0 ml-4 px-3 py-1.5 text-xs font-semibold text-white/60 bg-transparent border border-white/20 rounded-full hover:text-white hover:border-white/40 hover:bg-white/5 transition-colors"
+                  onClick={(e) => handleRemove(e, item.type, item.post.id)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -884,9 +884,9 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               <button className="bg-transparent border-none text-white cursor-pointer p-2 rounded-full transition-colors hover:bg-white/10">
                 <BackArrowIcon />
               </button>
-              <div className="animate-pulse">
-                <div className="h-4 bg-white/10 rounded w-16 mb-1" />
-                <div className="h-3 bg-white/10 rounded w-12" />
+              <div>
+                <div className="h-4 bg-white/5 skeleton-shimmer rounded w-16 mb-1" />
+                <div className="h-3 bg-white/5 skeleton-shimmer rounded w-12" />
               </div>
             </div>
             <button className="bg-white/8 border-none text-white/60 cursor-pointer p-2.5 rounded-full transition-colors hover:bg-white/15 hover:text-white">
@@ -896,14 +896,14 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
         </div>
 
         {/* Main card */}
-        <div className="border border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-2 animate-pulse">
+        <div className="border border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-2">
           <div className="px-5 pt-5 pb-2">
             {/* Author row */}
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-11 h-11 rounded-full bg-white/10" />
+              <div className="w-11 h-11 rounded-full bg-white/5 skeleton-shimmer" />
               <div className="flex items-baseline gap-2 flex-1">
-                <div className="h-4 bg-white/10 rounded w-24" />
-                <div className="h-3 bg-white/10 rounded w-8" />
+                <div className="h-4 bg-white/5 skeleton-shimmer rounded w-24" />
+                <div className="h-3 bg-white/5 skeleton-shimmer rounded w-8" />
               </div>
               <div className="ml-auto w-6 h-4 flex items-center justify-center">
                 <span className="text-white/35 text-lg">···</span>
@@ -911,17 +911,22 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
             </div>
 
             {/* Content */}
-            <div className="space-y-2 mb-6">
-              <div className="h-4 bg-white/10 rounded w-3/4" />
-              <div className="h-4 bg-white/10 rounded w-1/2" />
+            <div className="space-y-2 mb-4">
+              <div className="h-4 bg-white/5 skeleton-shimmer rounded w-3/4" />
+              <div className="h-4 bg-white/5 skeleton-shimmer rounded w-1/2" />
+            </div>
+
+            {/* Media Skeleton */}
+            <div className="mb-4">
+              <div className="w-full h-[220px] sm:h-[320px] rounded-xl bg-white/5 skeleton-shimmer" />
             </div>
 
             {/* Engagement bar */}
             <div className="flex items-center gap-4 py-2">
               {[1, 2, 3, 4].map(i => (
                 <div key={i} className="flex items-center gap-1.5 py-1 px-1.5">
-                  <div className="w-5 h-5 rounded bg-white/10" />
-                  <div className="w-4 h-3 bg-white/10 rounded" />
+                  <div className="w-5 h-5 rounded bg-white/5 skeleton-shimmer" />
+                  <div className="w-4 h-3 bg-white/5 skeleton-shimmer rounded" />
                 </div>
               ))}
             </div>
@@ -929,19 +934,19 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
 
           {/* Sort + View activity */}
           <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/5">
-            <div className="h-4 bg-white/10 rounded w-14" />
-            <div className="h-3 bg-white/10 rounded w-20" />
+            <div className="h-4 bg-white/5 skeleton-shimmer rounded w-14" />
+            <div className="h-3 bg-white/5 skeleton-shimmer rounded w-20" />
           </div>
 
           {/* Reply input */}
           <div className="border-t border-b border-white/5">
             <div className="flex items-center gap-3 px-5 py-3.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 shrink-0" />
-              <div className="flex-1 h-5 bg-white/5 rounded" />
+              <div className="w-9 h-9 rounded-full bg-white/5 skeleton-shimmer shrink-0" />
+              <div className="flex-1 h-5 bg-white/5 skeleton-shimmer rounded" />
               <div className="flex items-center gap-2 shrink-0">
-                <div className="w-6 h-6 rounded bg-white/5" />
-                <div className="w-6 h-6 rounded bg-white/5" />
-                <div className="w-6 h-6 rounded bg-white/5" />
+                <div className="w-6 h-6 rounded bg-white/5 skeleton-shimmer" />
+                <div className="w-6 h-6 rounded bg-white/5 skeleton-shimmer" />
+                <div className="w-6 h-6 rounded bg-white/5 skeleton-shimmer" />
               </div>
             </div>
           </div>

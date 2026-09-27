@@ -214,20 +214,20 @@ export default function ProfilePage() {
     <>
       <div className="max-w-[620px] mx-auto py-0 sm:py-6 px-0 sm:px-4">
         {/* ── Profile Header ── */}
-        <div className="border-0 sm:border border-white/10 rounded-none sm:rounded-2xl bg-transparent sm:bg-[#181818] p-5 mb-0 sm:mb-4">
+        <div className="border-0 sm:border border-white/10 rounded-none sm:rounded-2xl bg-transparent sm:bg-[#181818] p-5 max-sm:pb-3 mb-0 sm:mb-4">
           {/* Top row: name + avatar */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0 mr-4">
-              <h1 className="text-2xl font-bold text-white truncate">
+              <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
                 {profile.username}
               </h1>
-              <p className="text-sm text-white/50 mt-0.5">
+              <p className="text-xs sm:text-sm text-white/50 mt-0.5">
                 @{profile.username}
               </p>
             </div>
             <div className="relative shrink-0">
               <div
-                className="w-[76px] h-[76px] rounded-full overflow-hidden border-2 border-white/10 flex items-center justify-center"
+                className="w-[64px] h-[64px] sm:w-[76px] sm:h-[76px] rounded-full overflow-hidden border-2 border-white/10 flex items-center justify-center"
                 style={
                   !profile.profile_picture_url
                     ? { backgroundColor: avatarBg }
@@ -284,11 +284,11 @@ export default function ProfilePage() {
             </span>
           </button>
 
-          <div className="flex gap-2 w-full mt-2">
+          <div className="flex gap-1.5 sm:gap-2 w-full mt-2">
             {/* Edit Profile button */}
             <button
               onClick={() => setShowEditProfile(true)}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-white/20 bg-transparent text-white hover:bg-white/5 active:scale-[0.98]"
+              className="flex-1 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold transition-all cursor-pointer border border-white/20 bg-transparent text-white hover:bg-white/5 active:scale-[0.98]"
               id="profile-edit-btn"
             >
               Edit profile
@@ -298,7 +298,7 @@ export default function ProfilePage() {
             {profile.profile_type?.toLowerCase() !== 'pet' && (
               <button
                 onClick={() => setShowCreatePet(true)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-[#F7941D]/30 bg-transparent text-[#F7941D] hover:bg-[#F7941D]/5 active:scale-[0.98] flex items-center justify-center gap-2"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold transition-all cursor-pointer border border-[#F7941D]/30 bg-transparent text-[#F7941D] hover:bg-[#F7941D]/5 active:scale-[0.98] flex items-center justify-center gap-1.5 sm:gap-2 px-1"
                 id="profile-create-pet-btn"
               >
                 <PawPrint className="w-4 h-4" />

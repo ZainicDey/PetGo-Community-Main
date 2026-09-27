@@ -261,19 +261,19 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
         </button>
 
         {/* ── Profile Header ── */}
-        <div className="border-0 sm:border border-white/10 rounded-none sm:rounded-2xl bg-transparent sm:bg-[#181818] p-5 mb-0 sm:mb-4">
+        <div className="border-0 sm:border border-white/10 rounded-none sm:rounded-2xl bg-transparent sm:bg-[#181818] p-5 max-sm:pb-3 mb-0 sm:mb-4">
           {/* Top row: name + avatar */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0 mr-4">
-              <h1 className="text-2xl font-bold text-white truncate">
+              <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
                 {userProfile.username}
               </h1>
-              <p className="text-sm text-white/50 mt-0.5">
+              <p className="text-xs sm:text-sm text-white/50 mt-0.5">
                 @{userProfile.username}
               </p>
             </div>
             <div
-              className="w-[76px] h-[76px] rounded-full overflow-hidden shrink-0 border-2 border-white/10 flex items-center justify-center"
+              className="w-[64px] h-[64px] sm:w-[76px] sm:h-[76px] rounded-full overflow-hidden shrink-0 border-2 border-white/10 flex items-center justify-center"
               style={
                 !userProfile.profile_picture_url
                   ? { backgroundColor: avatarBg }
@@ -313,7 +313,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
           {/* Follow / Unfollow button */}
           <button
             onClick={() => (isFollowed ? handleUnfollow() : handleFollow())}
-            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border active:scale-[0.98] ${isFollowed
+            className={`w-full py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold transition-all cursor-pointer border active:scale-[0.98] ${isFollowed
                 ? 'border-white/20 bg-transparent text-white hover:bg-white/5'
                 : 'border-transparent bg-white text-black hover:bg-white/90'
               }`}

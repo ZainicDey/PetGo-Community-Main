@@ -50,7 +50,7 @@ body {
 
 :root {
   --nav-btn-width: auto;
-  --nav-btn-height: 50px;
+  --nav-btn-height: 44px;
   --nav-btn-font-size: 10px;
 }
 @media (min-width: 640px) {

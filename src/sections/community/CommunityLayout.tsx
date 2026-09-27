@@ -302,7 +302,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
   return (
     <div className="fixed inset-0 z-[1000] flex bg-[#101010] text-white font-open-sans flex-col sm:flex-row">
       {/* ── Left Sidebar ── */}
-      <aside className="w-full sm:w-[80px] lg:w-[260px] sm:ml-1 sm:min-w-[80px] lg:min-w-[260px] h-auto sm:h-screen flex flex-row sm:flex-col pt-0 sm:pt-4 px-1 sm:px-2 lg:px-3 pb-1 sm:pb-6 border-t sm:border-t-0 border-white/10 bg-[#101010] order-2 sm:order-1 fixed sm:static bottom-0 left-0 right-0 z-[100] sm:z-auto overflow-y-visible sm:overflow-y-auto scrollbar-hide">
+      <aside className="w-full sm:w-[80px] lg:w-[260px] sm:ml-1 sm:min-w-[80px] lg:min-w-[260px] max-sm:h-[44px] sm:h-screen flex flex-row sm:flex-col pt-0 sm:pt-4 px-1 sm:px-2 lg:px-3 pb-0 sm:pb-6 border-t sm:border-t-0 border-white/10 max-sm:bg-[#181818]/70 max-sm:backdrop-blur-lg sm:bg-[#101010] order-2 sm:order-1 fixed sm:static bottom-0 left-0 right-0 z-[100] sm:z-auto overflow-y-visible sm:overflow-y-auto scrollbar-hide">
         {/* Logo */}
         <div className="hidden sm:flex lg:pb-2.5 justify-center lg:justify-start">
           <Link
@@ -349,10 +349,8 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 id={`community-nav-${item.id}`}
               >
                 <span
-                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  className={`flex items-center justify-center shrink-0 transition-transform duration-200 ${isActive ? 'max-sm:w-[26px] max-sm:h-[26px] sm:w-[28px] sm:h-[28px]' : 'max-sm:w-[22px] max-sm:h-[22px] sm:w-[24px] sm:h-[24px]'}`}
                   style={{
-                    width: isActive ? 28 : 24,
-                    height: isActive ? 28 : 24,
                     animation: isActive ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
                   }}
                 >
@@ -382,10 +380,8 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 id={`community-nav-${item.id}`}
               >
                 <span
-                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  className={`flex items-center justify-center shrink-0 transition-transform duration-200 ${isActive ? 'max-sm:w-[26px] max-sm:h-[26px] sm:w-[28px] sm:h-[28px]' : 'max-sm:w-[22px] max-sm:h-[22px] sm:w-[24px] sm:h-[24px]'}`}
                   style={{
-                    width: isActive ? 28 : 24,
-                    height: isActive ? 28 : 24,
                     animation: isActive ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
                   }}
                 >
@@ -410,7 +406,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
             onClick={() => setShowNewThread(true)}
             aria-label="Create new thread"
           >
-            <span className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200">
+            <span className="flex items-center justify-center shrink-0 max-sm:w-[20px] max-sm:h-[20px] sm:w-[22px] sm:h-[22px] transition-transform duration-200">
               <PlusIcon />
             </span>
             <span className="hidden lg:block leading-none tracking-tight">
@@ -518,10 +514,8 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 onClick={() => setShowActivityPopover((prev) => !prev)}
               >
                 <span
-                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  className={`flex items-center justify-center shrink-0 transition-transform duration-200 ${activeNav === 'activity' ? 'max-sm:w-[26px] max-sm:h-[26px] sm:w-[28px] sm:h-[28px]' : 'max-sm:w-[22px] max-sm:h-[22px] sm:w-[24px] sm:h-[24px]'}`}
                   style={{
-                    width: activeNav === 'activity' ? 28 : 24,
-                    height: activeNav === 'activity' ? 28 : 24,
                     animation: activeNav === 'activity' ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
                   }}
                 >
@@ -549,10 +543,8 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 id={`community-nav-${item.id}`}
               >
                 <span
-                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  className={`flex items-center justify-center shrink-0 transition-transform duration-200 ${isActive ? 'max-sm:w-[26px] max-sm:h-[26px] sm:w-[28px] sm:h-[28px]' : 'max-sm:w-[22px] max-sm:h-[22px] sm:w-[24px] sm:h-[24px]'}`}
                   style={{
-                    width: isActive ? 28 : 24,
-                    height: isActive ? 28 : 24,
                     animation: isActive ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
                   }}
                 >

@@ -71,13 +71,13 @@ export default function LikedFeedPage() {
   return (
     <div className="max-w-[680px] mx-auto pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#101010]/80 backdrop-blur-xl border-b border-white/5 px-5 py-4">
-        <h1 className="text-xl font-bold text-white m-0">Liked Posts</h1>
-        <p className="text-sm text-white/40 mt-0.5 m-0">Posts you&apos;ve liked</p>
+      <div className="sticky top-0 z-10 bg-[#101010]/80 backdrop-blur-xl border-b border-white/5 px-5 max-sm:px-4 py-4 max-sm:py-2.5">
+        <h1 className="text-xl max-sm:text-lg font-bold text-white m-0">Liked Posts</h1>
+        <p className="text-sm max-sm:text-xs text-white/40 mt-0.5 m-0">Posts you&apos;ve liked</p>
       </div>
 
       {/* Content */}
-      <div className="border-1 border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-4">
+      <div className="border border-white/4 max-sm:border-0 rounded-3xl max-sm:rounded-none bg-[#181818]/70 max-sm:bg-transparent backdrop-blur-2xl max-sm:backdrop-blur-none shadow-[0_8px_32px_rgba(255,255,255,0.022)] max-sm:shadow-none overflow-hidden mt-4 max-sm:mt-0">
         {isLoading ? (
           <ThreadFeedSkeleton />
         ) : isError ? (
