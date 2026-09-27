@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import PetGoLogo from '@/assets/images/Logo_PetGo.png';
 import NewThreadModal from './NewThreadModal';
 import type { Thread } from './ThreadCard';
 import ProfileSwitcher from './ProfileSwitcher';
 import { useGetMeQuery } from '@/lib/store/services/usersApi';
+import { Heart, Users, Bookmark, Activity } from 'lucide-react';
 
 /* ── SVG Icons ── */
 const HomeOutlineIcon = () => (
@@ -17,7 +18,7 @@ const HomeOutlineIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       d="M21 10.9229C21 10.0115 20.5856 9.1494 19.874 8.58008L13.5615 3.53028C12.6485 2.79985 11.3515 2.79985 10.4385 3.53028L4.12598 8.58008C3.41436 9.1494 3 10.0115 3 10.9229V18C3 19.6569 4.34315 21 6 21H18C19.6569 21 21 19.6569 21 18V10.9229ZM23 18C23 20.7614 20.7614 23 18 23H6C3.23858 23 1 20.7614 1 18V10.9229C1 9.40394 1.69088 7.96742 2.87695 7.01856L9.18848 1.96876C10.832 0.65397 13.168 0.653969 14.8115 1.96876L21.123 7.01856C22.3091 7.96742 23 9.40394 23 10.9229V18Z"
@@ -32,7 +33,7 @@ const HomeFilledIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       d="M9.18887 1.96827C10.8324 0.653482 13.1676 0.65348 14.8111 1.96827L21.1235 7.01815C22.3096 7.96701 23 9.40357 23 10.9225V18C23 20.7614 20.7614 23 18 23H6C3.23858 23 1 20.7614 1 18V10.9225C1 9.40357 1.69045 7.96701 2.87652 7.01815L9.18887 1.96827Z"
@@ -49,7 +50,7 @@ const PlusIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 17, height: 17 }}
+    className="w-[28px] h-[28px] sm:w-[17px] sm:h-[17px]"
   >
     <path
       d="M12 2C12.5523 2 13 2.44772 13 3V11H21C21.5523 11 22 11.4477 22 12C22 12.5523 21.5523 13 21 13H13V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H11V3C11 2.44772 11.4477 2 12 2Z"
@@ -65,7 +66,7 @@ const SearchIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       clipRule="evenodd"
@@ -84,7 +85,7 @@ const MessageOutlineIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       clipRule="evenodd"
@@ -102,7 +103,7 @@ const MessageFilledIcon = () => (
     viewBox="0 0 22 22"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       d="M5.85195 21.4694L19.3245 14.0577C20.3799 13.477 21.1437 12.4247 21.2273 11.2231C21.3235 9.84073 20.6427 8.59809 19.4491 7.94169L5.99304 0.539493C4.62004 -0.215795 2.90086 -0.199435 1.63504 0.724303C0.58005 1.49419 0 2.65449 0 3.88663C0 4.24341 0.0481501 4.60548 0.1483 4.96612L1.33112 9.25543C1.44906 9.68303 1.83808 9.97933 2.28172 9.97933H14.3338C14.8788 9.97933 15.3199 10.4208 15.3199 10.9654C15.3199 11.5099 14.8788 11.9515 14.3338 11.9515H2.28172C1.83808 11.9515 1.44906 12.2477 1.33112 12.6754L0.19476 16.7962C-0.22893 18.3326 0.20275 20.0322 1.43072 21.0482C2.70569 22.103 4.40849 22.2628 5.85195 21.4694Z"
@@ -119,7 +120,7 @@ const ActivityOutlineIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       d="M16.5 2C14.8335 2 13.2217 2.70703 12 3.93652C10.7783 2.70704 9.1665 2 7.5 2C3.3785 2 0.5 5.08423 0.5 9.5C0.5 14.1284 4.84516 19.4619 11.311 22.7719C11.5267 22.8827 11.7633 22.9379 12 22.9379C12.2367 22.9379 12.4733 22.8827 12.689 22.7719C19.1548 19.4619 23.5 14.1284 23.5 9.5C23.5 5.08423 20.6217 2 16.5 2ZM12 20.8764C6.30767 17.8962 2.5 13.3467 2.5 9.5C2.5 6.15893 4.4625 4 7.5 4C9.5 4 11.25 5.75 12 7.5C12.75 5.75 14.5 4 16.5 4C19.5377 4 21.5 6.15893 21.5 9.5C21.5 13.3467 17.6923 17.8962 12 20.8764Z"
@@ -135,7 +136,7 @@ const ActivityFilledIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       d="M16.5 2C14.8335 2 13.2217 2.70703 12 3.93652C10.7783 2.70704 9.1665 2 7.5 2C3.3785 2 0.5 5.08423 0.5 9.5C0.5 14.1284 4.84516 19.4619 11.311 22.7719C11.5267 22.8827 11.7633 22.9379 12 22.9379C12.2367 22.9379 12.4733 22.8827 12.689 22.7719C19.1548 19.4619 23.5 14.1284 23.5 9.5C23.5 5.08423 20.6217 2 16.5 2Z"
@@ -152,7 +153,7 @@ const ProfileOutlineIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       d="M11.9997 1C15.0373 1 17.4997 3.46244 17.4997 6.5C17.4997 9.53756 15.0373 12 11.9997 12C8.9622 11.9998 6.49967 9.53745 6.49967 6.5C6.49967 3.46255 8.9622 1.00018 11.9997 1ZM11.9997 3C10.0668 3.00018 8.49967 4.56711 8.49967 6.5C8.49967 8.43289 10.0668 9.99982 11.9997 10C13.9327 10 15.4997 8.433 15.4997 6.5C15.4997 4.567 13.9327 3 11.9997 3Z"
@@ -174,7 +175,7 @@ const ProfileFilledIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ width: 20, height: 20 }}
+    className="w-[28px] h-[28px] sm:w-[20px] sm:h-[20px]"
   >
     <path
       d="M11.9999 1C15.0375 1 17.4999 3.46243 17.4999 6.5C17.4999 9.53757 15.0375 12 11.9999 12C8.96239 12 6.49992 9.53754 6.49992 6.5C6.49992 3.46246 8.96239 1.00005 11.9999 1Z"
@@ -231,14 +232,35 @@ interface CommunityLayoutProps {
 }
 
 const navBtnBaseClass =
-  'flex flex-col sm:flex-row items-center justify-center lg:justify-start lg:pl-2 gap-0.5 sm:gap-0 lg:gap-2.5 rounded-md sm:rounded-lg transition-all hover:bg-white/5 hover:text-white/90 select-none cursor-pointer bg-transparent border-none font-inherit mx-auto lg:mx-0 p-1 sm:p-0';
+  'flex flex-col sm:flex-row items-center justify-center lg:justify-start lg:pl-2 gap-0.5 sm:gap-0 lg:gap-2.5 rounded-md sm:rounded-lg transition-all hover:bg-white/5 hover:text-white/90 select-none cursor-pointer bg-transparent border-none font-inherit mx-auto lg:mx-0 p-1 sm:p-0 flex-1 sm:flex-none';
 
 export default function CommunityLayout({ children }: CommunityLayoutProps) {
   const [showNewThread, setShowNewThread] = useState(false);
   const [quoteThread, setQuoteThread] = useState<Thread | null>(null);
+  const [showActivityPopover, setShowActivityPopover] = useState(false);
+  const activityPopoverRef = useRef<HTMLDivElement>(null);
+  const activityTriggerRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   useGetMeQuery();
+
+  /* Close activity popover on outside click */
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        activityPopoverRef.current &&
+        !activityPopoverRef.current.contains(e.target as Node) &&
+        activityTriggerRef.current &&
+        !activityTriggerRef.current.contains(e.target as Node)
+      ) {
+        setShowActivityPopover(false);
+      }
+    }
+    if (showActivityPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActivityPopover]);
 
   /* Derive active nav from current pathname */
   const activeNav = pathname?.startsWith('/community/profile')
@@ -302,6 +324,14 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex flex-row sm:flex-col w-full sm:w-auto justify-around sm:justify-start gap-0 sm:gap-0 sm:mt-5">
+          {/* Mobile nav icon scale animation */}
+          <style jsx>{`
+            @keyframes navIconPop {
+              0% { transform: scale(0.85); }
+              50% { transform: scale(1.08); }
+              100% { transform: scale(1); }
+            }
+          `}</style>
           {/* For You (Home) */}
           {navItems.slice(0, 1).map((item) => {
             const isActive = activeNav === item.id;
@@ -310,7 +340,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
               <button
                 key={item.id}
                 onClick={() => router.push(item.href)}
-                className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'}`}
+                className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold sm:bg-white/10' : 'text-white font-normal'}`}
                 style={{
                   width: 'var(--nav-btn-width)',
                   height: 'var(--nav-btn-height)',
@@ -318,35 +348,22 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 }}
                 id={`community-nav-${item.id}`}
               >
-                <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
+                <span
+                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  style={{
+                    width: isActive ? 28 : 24,
+                    height: isActive ? 28 : 24,
+                    animation: isActive ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
+                  }}
+                >
                   <Icon />
                 </span>
-                <span className="block sm:hidden lg:block leading-none tracking-tight">
+                <span className="hidden lg:block leading-none tracking-tight">
                   {item.label}
                 </span>
               </button>
             );
           })}
-
-          {/* New Thread button */}
-          <button
-            id="community-new-thread-btn"
-            className={`${navBtnBaseClass} text-white`}
-            style={{
-              width: 'var(--nav-btn-width)',
-              height: 'var(--nav-btn-height)',
-              fontSize: 'var(--nav-btn-font-size)',
-            }}
-            onClick={() => setShowNewThread(true)}
-            aria-label="Create new thread"
-          >
-            <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
-              <PlusIcon />
-            </span>
-            <span className="block sm:hidden lg:block leading-none tracking-tight">
-              New post
-            </span>
-          </button>
 
           {/* Search */}
           {navItems.slice(1, 2).map((item) => {
@@ -356,7 +373,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
               <button
                 key={item.id}
                 onClick={() => router.push(item.href)}
-                className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'}`}
+                className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold sm:bg-white/10' : 'text-white font-normal'}`}
                 style={{
                   width: 'var(--nav-btn-width)',
                   height: 'var(--nav-btn-height)',
@@ -364,15 +381,42 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 }}
                 id={`community-nav-${item.id}`}
               >
-                <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
+                <span
+                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  style={{
+                    width: isActive ? 28 : 24,
+                    height: isActive ? 28 : 24,
+                    animation: isActive ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
+                  }}
+                >
                   <Icon />
                 </span>
-                <span className="block sm:hidden lg:block leading-none tracking-tight">
+                <span className="hidden lg:block leading-none tracking-tight">
                   {item.label}
                 </span>
               </button>
             );
           })}
+
+          {/* New Thread button */}
+          <button
+            id="community-new-thread-btn"
+            className={`${navBtnBaseClass} text-white max-sm:bg-[#2a2a2a] max-sm:mx-1 max-sm:rounded-xl`}
+            style={{
+              width: 'var(--nav-btn-width)',
+              height: 'var(--nav-btn-height)',
+              fontSize: 'var(--nav-btn-font-size)',
+            }}
+            onClick={() => setShowNewThread(true)}
+            aria-label="Create new thread"
+          >
+            <span className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200">
+              <PlusIcon />
+            </span>
+            <span className="hidden lg:block leading-none tracking-tight">
+              New post
+            </span>
+          </button>
 
           {/* Activity section with always-visible sub-items */}
           <div className="contents sm:block sm:mt-6">
@@ -407,11 +451,10 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                   <button
                     key={sub.id}
                     onClick={() => router.push(sub.href)}
-                    className={`flex items-center justify-start lg:pl-12 rounded-lg transition-all bg-transparent border-none cursor-pointer font-inherit p-0 ${
-                      activeActivitySub === sub.id
-                        ? 'text-[#ffe1bd] font-semibold bg-white/10'
-                        : 'text-white/60 hover:text-white/90 hover:bg-white/5'
-                    }`}
+                    className={`flex items-center justify-start lg:pl-12 rounded-lg transition-all bg-transparent border-none cursor-pointer font-inherit p-0 ${activeActivitySub === sub.id
+                      ? 'text-[#ffe1bd] font-semibold bg-white/10'
+                      : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                      }`}
                     style={{
                       width: 'var(--nav-btn-width)',
                       height: 'var(--nav-btn-height)',
@@ -424,39 +467,80 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
               </div>
             </div>
 
-            {/* Mobile: Activity button navigates directly */}
-            <button
-              className={`sm:hidden ${navBtnBaseClass} ${activeNav === 'activity' ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'}`}
-              style={{
-                width: 'var(--nav-btn-width)',
-                height: 'var(--nav-btn-height)',
-                fontSize: 'var(--nav-btn-font-size)',
-              }}
-              onClick={() => router.push('/community/activity')}
-            >
-              <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
-                {activeNav === 'activity' ? <ActivityFilledIcon /> : <ActivityOutlineIcon />}
-              </span>
-              <span className="block sm:hidden leading-none tracking-tight">
-                Activity
-              </span>
-            </button>
+            {/* Mobile: Activity button opens popover */}
+            <div className="relative sm:hidden flex-1 flex items-center justify-center">
+              {/* Activity Popover */}
+              {showActivityPopover && (
+                <div
+                  ref={activityPopoverRef}
+                  className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[200px] bg-[#1c1919] border border-white/10 rounded-2xl overflow-hidden shadow-xl shadow-black/40 z-[1000]"
+                  style={{ animation: 'fadeInUp 150ms ease-out' }}
+                >
+                  <div className="py-1.5">
+                    {[
+                      { id: 'myactivity', label: 'My Activity', href: '/community/activity', icon: Activity },
+                      { id: 'liked', label: 'Liked', href: '/community/activity/liked', icon: Heart },
+                      { id: 'following', label: 'Following', href: '/community/activity/following', icon: Users },
+                      { id: 'saved', label: 'Saved', href: '/community/activity/saved', icon: Bookmark },
+                    ].map((sub) => {
+                      const SubIcon = sub.icon;
+                      const isSubActive = activeActivitySub === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => {
+                            setShowActivityPopover(false);
+                            router.push(sub.href);
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors cursor-pointer bg-transparent border-none text-left ${isSubActive
+                            ? 'text-[#ffe1bd] font-semibold bg-white/5'
+                            : 'text-white/80 hover:bg-white/5 hover:text-white'
+                            }`}
+                        >
+                          <SubIcon className={`w-[18px] h-[18px] ${isSubActive ? 'text-[#ffe1bd]' : 'text-white/50'
+                            }`} />
+                          <span>{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-            {/* Mobile Profile Switcher in the nav row */}
-            <div className="contents sm:hidden">
-              <ProfileSwitcher isMobile />
+              <button
+                ref={activityTriggerRef}
+                className={`${navBtnBaseClass} ${activeNav === 'activity' ? 'text-[#ffe1bd] font-semibold' : 'text-white font-normal'}`}
+                style={{
+                  width: 'var(--nav-btn-width)',
+                  height: 'var(--nav-btn-height)',
+                  fontSize: 'var(--nav-btn-font-size)',
+                }}
+                onClick={() => setShowActivityPopover((prev) => !prev)}
+              >
+                <span
+                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  style={{
+                    width: activeNav === 'activity' ? 28 : 24,
+                    height: activeNav === 'activity' ? 28 : 24,
+                    animation: activeNav === 'activity' ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
+                  }}
+                >
+                  {activeNav === 'activity' ? <ActivityFilledIcon /> : <ActivityOutlineIcon />}
+                </span>
+              </button>
             </div>
+
           </div>
 
           {/* Profile */}
           {navItems.slice(3, 4).map((item) => {
             const isActive = activeNav === item.id;
             const Icon = isActive ? item.FilledIcon : item.OutlineIcon;
-            return (
+            const btn = (
               <button
                 key={item.id}
                 onClick={() => router.push(item.href)}
-                className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold bg-white/10' : 'text-white font-normal'} sm:mt-6`}
+                className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold sm:bg-white/10' : 'text-white font-normal'} sm:mt-6`}
                 style={{
                   width: 'var(--nav-btn-width)',
                   height: 'var(--nav-btn-height)',
@@ -464,13 +548,33 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 }}
                 id={`community-nav-${item.id}`}
               >
-                <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
+                <span
+                  className="flex items-center justify-center shrink-0 sm:w-[22px] sm:h-[22px] transition-transform duration-200"
+                  style={{
+                    width: isActive ? 28 : 24,
+                    height: isActive ? 28 : 24,
+                    animation: isActive ? 'navIconPop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : undefined,
+                  }}
+                >
                   <Icon />
                 </span>
-                <span className="block sm:hidden lg:block leading-none tracking-tight">
+                <span className="hidden lg:block leading-none tracking-tight">
                   {item.label}
                 </span>
               </button>
+            );
+
+            return (
+              <React.Fragment key={item.id}>
+                {/* Mobile: opens ProfileSwitcher popover */}
+                <div className="flex-1 flex items-center justify-center sm:hidden">
+                  <ProfileSwitcher isMobile customTrigger={btn} />
+                </div>
+                {/* Desktop: normal navigation button */}
+                <div className="hidden sm:contents">
+                  {btn}
+                </div>
+              </React.Fragment>
             );
           })}
         </nav>
@@ -494,11 +598,12 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
             setShowNewThread(false);
             setQuoteThread(null);
           }}
-          onPost={(text, files) => {
+          onPost={(text, files, visibility) => {
             window.dispatchEvent(new CustomEvent('community-new-post', {
               detail: {
                 text,
                 files,
+                visibility,
                 quoted_post_id: quoteThread ? Number(quoteThread.id) : undefined,
               },
             }));

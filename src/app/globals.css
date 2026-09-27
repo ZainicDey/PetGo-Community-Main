@@ -67,3 +67,12 @@ body {
     --nav-btn-font-size: 15px;
   }
 }
+
+@keyframes slideUpModal {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

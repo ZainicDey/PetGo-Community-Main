@@ -237,11 +237,11 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
 
   return (
     <>
-      <div className="max-w-[620px] mx-auto py-6 px-4">
+      <div className="max-w-[620px] mx-auto py-0 sm:py-6 px-0 sm:px-4">
         {/* ── Back Button ── */}
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors cursor-pointer bg-transparent border-none p-0 mb-4"
+          className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors cursor-pointer bg-transparent border-none p-4 sm:p-0 mb-0 sm:mb-4"
           id="user-profile-back-btn"
         >
           <svg
@@ -261,7 +261,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
         </button>
 
         {/* ── Profile Header ── */}
-        <div className="border border-white/10 rounded-2xl bg-[#181818] p-5 mb-4">
+        <div className="border-0 sm:border border-white/10 rounded-none sm:rounded-2xl bg-transparent sm:bg-[#181818] p-5 mb-0 sm:mb-4">
           {/* Top row: name + avatar */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0 mr-4">
@@ -313,11 +313,10 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
           {/* Follow / Unfollow button */}
           <button
             onClick={() => (isFollowed ? handleUnfollow() : handleFollow())}
-            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border active:scale-[0.98] ${
-              isFollowed
+            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border active:scale-[0.98] ${isFollowed
                 ? 'border-white/20 bg-transparent text-white hover:bg-white/5'
                 : 'border-transparent bg-white text-black hover:bg-white/90'
-            }`}
+              }`}
             id="user-profile-follow-btn"
           >
             {isFollowed ? 'Following' : 'Follow'}
@@ -330,19 +329,18 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 text-center text-sm font-semibold transition-colors cursor-pointer bg-transparent border-none ${
-                activeTab === tab
+              className={`flex-1 py-3 text-center text-sm font-semibold transition-colors cursor-pointer bg-transparent border-none ${activeTab === tab
                   ? 'text-white'
                   : 'text-white/40 hover:text-white/60'
-              }`}
+                }`}
             >
               {tab === 'posts' ? 'Posts' : 'Reposts'}
             </button>
           ))}
           {/* Animated bottom border */}
-          <div 
+          <div
             className="absolute bottom-0 w-1/2 h-full pointer-events-none transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-            style={{ 
+            style={{
               transform: activeTab === 'posts' ? 'translateX(0%)' : 'translateX(100%)',
             }}
           >
@@ -351,7 +349,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
         </div>
 
         {/* ── Posts List ── */}
-        <div className="mt-4 border-1 border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden">
+        <div className="mt-0 sm:mt-4 border-0 sm:border-1 border-white/4 rounded-none sm:rounded-3xl bg-transparent sm:bg-[#181818]/70 sm:backdrop-blur-2xl shadow-none sm:shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden">
           {isListLoading ? (
             <ThreadFeedSkeleton />
           ) : currentList.length === 0 ? (

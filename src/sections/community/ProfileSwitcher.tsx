@@ -30,7 +30,7 @@ function getAvatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-export default function ProfileSwitcher({ className, isMobile }: { className?: string, isMobile?: boolean }) {
+export default function ProfileSwitcher({ className, isMobile, customTrigger }: { className?: string, isMobile?: boolean, customTrigger?: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showProfiles, setShowProfiles] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
@@ -93,12 +93,12 @@ export default function ProfileSwitcher({ className, isMobile }: { className?: s
   const defaultClassName = isMobile ? 'relative' : 'relative hidden sm:block mt-auto pt-4 pb-2';
 
   return (
-    <div className={className || defaultClassName}>
+    <div className={customTrigger ? 'contents' : (className || defaultClassName)}>
       {/* ── Popover ── */}
       {isOpen && (
         <div
           ref={popoverRef}
-          className={`absolute ${isMobile ? 'bottom-[calc(100%+10px)] right-0 mb-2 w-[220px]' : 'bottom-full left-1 lg:left-0 mb-2 w-[220px] lg:w-[240px]'} bg-[#1c1919] border border-white/10 rounded-2xl overflow-hidden shadow-xl shadow-black/40 z-[1000]`}
+          className={`absolute ${isMobile ? 'bottom-[calc(100%+10px)] right-4 mb-2 w-[220px]' : 'bottom-full left-1 lg:left-0 mb-2 w-[220px] lg:w-[240px]'} bg-[#1c1919] border border-white/10 rounded-2xl overflow-hidden shadow-xl shadow-black/40 z-[1000]`}
           style={{ animation: 'fadeInUp 150ms ease-out' }}
         >
           {/* Main menu */}
@@ -213,22 +213,33 @@ export default function ProfileSwitcher({ className, isMobile }: { className?: s
       )}
 
       {/* ── Trigger button ── */}
-      <button
-        ref={triggerRef}
-        id={`profile-switcher-trigger${isMobile ? '-mobile' : ''}`}
-        onClick={() => {
-          setIsOpen((prev) => !prev);
-          if (isOpen) setShowProfiles(false);
-        }}
-        className={isMobile 
-          ? "flex flex-col items-center justify-center gap-0.5 rounded-md transition-all hover:bg-white/10 hover:text-[#ffe1bd] select-none cursor-pointer bg-transparent border-none font-inherit mx-auto p-1"
-          : "w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer bg-transparent border-none group"}
-        style={isMobile ? { width: 'var(--nav-btn-width)', height: 'var(--nav-btn-height)', fontSize: 'var(--nav-btn-font-size)' } : undefined}
-      >
+      {customTrigger ? (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        React.cloneElement(customTrigger as React.ReactElement<any>, {
+          ref: triggerRef,
+          onClick: (e: React.MouseEvent) => {
+            e.preventDefault();
+            setIsOpen((prev) => !prev);
+            if (isOpen) setShowProfiles(false);
+          }
+        })
+      ) : (
+        <button
+          ref={triggerRef}
+          id={`profile-switcher-trigger${isMobile ? '-mobile' : ''}`}
+          onClick={() => {
+            setIsOpen((prev) => !prev);
+            if (isOpen) setShowProfiles(false);
+          }}
+          className={isMobile 
+            ? "flex flex-col items-center justify-center gap-0.5 rounded-md transition-all hover:bg-white/10 hover:text-[#ffe1bd] select-none cursor-pointer bg-transparent border-none font-inherit mx-auto p-1"
+            : "w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer bg-transparent border-none group"}
+          style={isMobile ? { width: 'var(--nav-btn-width)', height: 'var(--nav-btn-height)', fontSize: 'var(--nav-btn-font-size)' } : undefined}
+        >
         {isMobile ? (
           <>
             <div
-              className="w-[22px] h-[22px] rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+              className="w-[32px] h-[32px] sm:w-[22px] sm:h-[22px] rounded-full overflow-hidden shrink-0 flex items-center justify-center"
               style={!profile.profile_picture_url ? { backgroundColor: avatarBg } : undefined}
             >
               {profile.profile_picture_url ? (
@@ -238,7 +249,7 @@ export default function ProfileSwitcher({ className, isMobile }: { className?: s
                 <span className="text-[10px] font-bold text-white">{initials}</span>
               )}
             </div>
-            <span className="block leading-none tracking-tight text-white font-normal" style={{ fontSize: 'var(--nav-btn-font-size)' }}>
+            <span className="hidden leading-none tracking-tight text-white font-normal" style={{ fontSize: 'var(--nav-btn-font-size)' }}>
               Profile
             </span>
           </>
@@ -278,6 +289,7 @@ export default function ProfileSwitcher({ className, isMobile }: { className?: s
           </>
         )}
       </button>
+      )}
 
       {/* Inline animation keyframes */}
       <style jsx>{`

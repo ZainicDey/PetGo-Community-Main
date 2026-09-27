@@ -100,7 +100,7 @@ export default function CommunityFeed() {
 
   const [repostPost] = useRepostMutation();
 
-  const handleNewThread = React.useCallback(async (text: string, files: File[] = [], quotedPostId?: number) => {
+  const handleNewThread = React.useCallback(async (text: string, files: File[] = [], quotedPostId?: number, visibility?: string) => {
     // If it's a quote but text and files are empty, treat as a direct repost
     if (!text.trim() && files.length === 0 && quotedPostId) {
       try {
@@ -143,7 +143,7 @@ export default function CommunityFeed() {
         uploadedMedia = await Promise.all(files.map(uploadMediaToCloudinary));
       }
       
-      await createPost({ content: text, media: uploadedMedia, quoted_post_id: quotedPostId }).unwrap();
+      await createPost({ content: text, media: uploadedMedia, quoted_post_id: quotedPostId, visibility }).unwrap();
       // Remove local optimistic thread after the API response triggers a refetch
       setLocalThreads((prev) => prev.filter((t) => t.id !== tempThread.id));
       
@@ -157,9 +157,9 @@ export default function CommunityFeed() {
 
   useEffect(() => {
     const handleCustomPost = (e: Event) => {
-      const customEvent = e as CustomEvent<{ text: string; files: File[]; quoted_post_id?: number }>;
+      const customEvent = e as CustomEvent<{ text: string; files: File[]; quoted_post_id?: number; visibility?: string }>;
       if (customEvent.detail) {
-        handleNewThread(customEvent.detail.text, customEvent.detail.files, customEvent.detail.quoted_post_id);
+        handleNewThread(customEvent.detail.text, customEvent.detail.files, customEvent.detail.quoted_post_id, customEvent.detail.visibility);
       }
     };
     window.addEventListener('community-new-post', handleCustomPost);
@@ -169,20 +169,20 @@ export default function CommunityFeed() {
   }, [handleNewThread]);
 
   return (
-    <div className="max-w-[680px] mx-auto px-4 pb-20">
+    <div className="max-w-[680px] mx-auto px-0 sm:px-4 pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#101010]/92 backdrop-blur-md pt-5 mb-1">
-        <div className="flex relative mb-5">
+      <div className="sticky top-0 z-10 bg-[#101010]/92 backdrop-blur-md pt-0 sm:pt-5 mb-1">
+        <div className="flex relative mb-2 sm:mb-5">
           <button
             id="community-tab-foryou"
-            className={`flex-1 py-3 px-4 bg-transparent border-none text-[15px] cursor-pointer transition-colors hover:text-[#ffe1bd] font-inherit ${activeTab === 'foryou' ? "text-[#ffe1bd] font-semibold" : 'text-white/40 font-medium'}`}
+            className={`flex-1 py-2.5 sm:py-3 px-4 bg-transparent border-none text-[14px] sm:text-[15px] cursor-pointer transition-colors hover:text-[#ffe1bd] font-inherit ${activeTab === 'foryou' ? "text-[#ffe1bd] font-semibold" : 'text-white/40 font-medium'}`}
             onClick={() => setActiveTab('foryou')}
           >
             For you
           </button>
           <button
             id="community-tab-following"
-            className={`flex-1 py-3 px-4 bg-transparent border-none text-[15px] cursor-pointer transition-colors hover:text-[#ffe1bd] font-inherit ${activeTab === 'following' ? "text-[#ffe1bd] font-semibold" : 'text-white/40 font-medium'}`}
+            className={`flex-1 py-2.5 sm:py-3 px-4 bg-transparent border-none text-[14px] sm:text-[15px] cursor-pointer transition-colors hover:text-[#ffe1bd] font-inherit ${activeTab === 'following' ? "text-[#ffe1bd] font-semibold" : 'text-white/40 font-medium'}`}
             onClick={() => setActiveTab('following')}
           >
             Liked
@@ -201,10 +201,10 @@ export default function CommunityFeed() {
       </div>
 
       {/* Main Feed Container */}
-      <div className="border-1 border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-4">
+      <div className="border-0 sm:border-1 border-white/4 rounded-none sm:rounded-3xl bg-transparent sm:bg-[#181818]/70 sm:backdrop-blur-2xl shadow-none sm:shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-0 sm:mt-4">
         {/* What's new box */}
         <div
-          className="flex items-center gap-3 py-4 px-5 border-b border-white/5 cursor-pointer"
+          className="hidden sm:flex items-center gap-3 py-4 px-5 border-b border-white/5 cursor-pointer"
           onClick={(e) => {
             if ((e.target as HTMLElement).tagName !== 'BUTTON' && (e.target as HTMLElement).closest('button') === null) {
               window.dispatchEvent(new CustomEvent('community-open-new-thread'));

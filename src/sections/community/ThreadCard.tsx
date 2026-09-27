@@ -238,8 +238,9 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
         <div className="px-4 pb-2">
           {post.media[0].type === 'video' ? (
             <video
-              src={post.media[0].url}
-              className="w-auto h-auto max-w-full max-h-[380px] rounded-xl"
+              src={`${post.media[0].url}#t=0.001`}
+              preload="metadata"
+              className="w-auto h-auto max-w-full max-h-[280px] sm:max-h-[380px] rounded-xl"
             />
           ) : (
             <Image
@@ -248,7 +249,7 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
               width={680}
               height={380}
               unoptimized
-              className="w-auto h-auto max-w-full max-h-[380px] rounded-xl"
+              className="w-auto h-auto max-w-full max-h-[280px] sm:max-h-[380px] rounded-xl object-contain object-left sm:object-center"
             />
           )}
         </div>
@@ -408,9 +409,14 @@ export default function ThreadCard({
 
   return (
     <article
-      className="py-4 px-5 border-b border-white/5 flex flex-col gap-1.5 animate-fade-in-up last:border-b-0"
+      className="py-4 px-5 border-b border-white/5 flex flex-col gap-1.5 animate-fade-in-up last:border-b-0 cursor-pointer transition-colors hover:bg-white/[0.02]"
       style={{ animationDelay }}
       id={`thread-${thread.id}`}
+      onClick={() => {
+        startTransition(() => {
+          router.push(`/community/thread/${thread.id}`);
+        });
+      }}
     >
       {thread.repostedBy && (
         <div className="flex items-center gap-1.5 text-xs font-semibold text-white/50 pl-[52px] mb-0.5">
@@ -426,7 +432,8 @@ export default function ThreadCard({
       <div className="flex gap-3">
         {/* Avatar column */}
         <div className="flex flex-col items-center gap-0 shrink-0">
-          <div className="relative flex cursor-pointer" onClick={() => {
+          <div className="relative flex cursor-pointer" onClick={(e) => {
+            e.stopPropagation();
             if (thread.isOwn) {
               startTransition(() => router.push('/community/profile'));
             } else if (thread.authorId !== undefined) {
@@ -474,7 +481,8 @@ export default function ThreadCard({
           <div className="flex items-baseline gap-2 mb-1">
             <span
               className="text-[15px] font-semibold text-white flex items-center gap-1.5 cursor-pointer hover:underline"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (thread.isOwn) {
                   startTransition(() => router.push('/community/profile'));
                 } else if (thread.authorId !== undefined) {
@@ -597,18 +605,20 @@ export default function ThreadCard({
                   {thread.media.map((item, idx) => (
                     <CarouselItem
                       key={idx}
-                      className={`pl-2 ${thread.media!.length === 1
-                          ? 'basis-full'
-                          : 'basis-auto'
+                      className={`pl-2 flex items-center ${thread.media!.length === 1
+                        ? 'basis-full'
+                        : 'basis-auto'
                         }`}
                     >
                       {item.type === 'video' ? (
                         <video
-                          src={item.url}
+                          src={`${item.url}#t=0.001`}
+                          preload="metadata"
                           controls
-                          className={`rounded-xl shrink-0 select-none w-auto ${thread.media!.length === 1
-                              ? 'h-auto max-w-full max-h-[380px]'
-                              : 'h-[280px] sm:h-[320px] max-w-none'
+                          onClick={(e) => e.stopPropagation()}
+                          className={`rounded-xl shrink-0 select-none ${thread.media!.length === 1
+                            ? 'w-auto h-auto max-w-full max-h-[280px] sm:max-h-[380px]'
+                            : 'w-auto h-[220px] sm:h-[320px] max-w-none'
                             }`}
                         />
                       ) : (
@@ -620,7 +630,8 @@ export default function ThreadCard({
                           priority={index < 2}
                           unoptimized
                           draggable={false}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const emblaInstance = api as unknown as {
                               clickAllowed?: () => boolean;
                             };
@@ -632,9 +643,9 @@ export default function ThreadCard({
                             }
                             setSelectedMedia(item);
                           }}
-                          className={`rounded-xl shrink-0 select-none w-auto ${thread.media!.length === 1
-                              ? 'h-auto max-w-full max-h-[380px]'
-                              : 'h-[280px] sm:h-[320px] max-w-none'
+                          className={`rounded-xl shrink-0 select-none cursor-pointer ${thread.media!.length === 1
+                            ? 'w-auto h-auto max-w-full max-h-[280px] sm:max-h-[380px] object-contain object-left sm:object-center'
+                            : 'w-auto h-[220px] sm:h-[320px] max-w-none'
                             }`}
                         />
                       )}
@@ -649,7 +660,7 @@ export default function ThreadCard({
                   {Array.from({ length: count }).map((_, idx) => (
                     <button
                       key={idx}
-                      onClick={() => api?.scrollTo(idx)}
+                      onClick={(e) => { e.stopPropagation(); api?.scrollTo(idx); }}
                       className={`w-1.5 h-1.5 rounded-full p-0 border-none transition-all duration-200 cursor-pointer ${current === idx ? 'bg-[#F7941D] scale-125' : 'bg-white/20 hover:bg-white/40'
                         }`}
                       aria-label={`Go to slide ${idx + 1}`}
@@ -680,7 +691,7 @@ export default function ThreadCard({
               className="flex items-center gap-1.5 bg-transparent border-none text-white/50 cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:text-white/85 hover:bg-white/5"
               aria-label="Reply"
               id={`thread-reply-${thread.id}`}
-              onClick={() => router.push(`/community/thread/${thread.id}`)}
+              onClick={(e) => { e.stopPropagation(); router.push(`/community/thread/${thread.id}`); }}
             >
               <div className="w-5 h-5 shrink-0">
                 <CommentIcon />
@@ -766,7 +777,8 @@ export default function ThreadCard({
           </button>
           {selectedMedia.type === 'video' ? (
             <video
-              src={selectedMedia.url}
+              src={`${selectedMedia.url}#t=0.001`}
+              preload="metadata"
               controls
               autoPlay
               className="max-w-[95vw] max-h-[95vh] w-full h-full object-contain cursor-default"

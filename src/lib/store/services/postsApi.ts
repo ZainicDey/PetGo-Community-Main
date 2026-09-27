@@ -17,6 +17,7 @@ interface CreatePostBody {
   content: string;
   media?: MediaItem[];
   quoted_post_id?: number;
+  visibility?: string;
 }
 
 export const postsApi = api.injectEndpoints({

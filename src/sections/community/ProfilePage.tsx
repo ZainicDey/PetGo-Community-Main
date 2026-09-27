@@ -130,7 +130,7 @@ export default function ProfilePage() {
       if (!uploadRes.ok) throw new Error('Failed to upload image');
 
       const uploadData = await uploadRes.json();
-      
+
       await updateProfile({ profile_picture_url: uploadData.secure_url }).unwrap();
     } catch (err) {
       console.error('Quick PFP upload error:', err);
@@ -212,9 +212,9 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="max-w-[620px] mx-auto py-6 px-4">
+      <div className="max-w-[620px] mx-auto py-0 sm:py-6 px-0 sm:px-4">
         {/* ── Profile Header ── */}
-        <div className="border border-white/10 rounded-2xl bg-[#181818] p-5 mb-4">
+        <div className="border-0 sm:border border-white/10 rounded-none sm:rounded-2xl bg-transparent sm:bg-[#181818] p-5 mb-0 sm:mb-4">
           {/* Top row: name + avatar */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0 mr-4">
@@ -247,7 +247,7 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
-              <label 
+              <label
                 htmlFor="profile-picture-upload-quick"
                 className="absolute bottom-0 right-0 w-7 h-7 bg-[#282828] border border-white/20 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/20 transition-colors shadow-md"
                 title="Change Profile Picture"
@@ -284,26 +284,28 @@ export default function ProfilePage() {
             </span>
           </button>
 
-          {/* Edit Profile button */}
-          <button
-            onClick={() => setShowEditProfile(true)}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-white/20 bg-transparent text-white hover:bg-white/5 active:scale-[0.98]"
-            id="profile-edit-btn"
-          >
-            Edit profile
-          </button>
-
-          {/* Create Pet Profile — only visible for owner (user) profiles */}
-          {profile.profile_type?.toLowerCase() !== 'pet' && (
+          <div className="flex gap-2 w-full mt-2">
+            {/* Edit Profile button */}
             <button
-              onClick={() => setShowCreatePet(true)}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-[#F7941D]/30 bg-transparent text-[#F7941D] hover:bg-[#F7941D]/5 active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
-              id="profile-create-pet-btn"
+              onClick={() => setShowEditProfile(true)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-white/20 bg-transparent text-white hover:bg-white/5 active:scale-[0.98]"
+              id="profile-edit-btn"
             >
-              <PawPrint className="w-4 h-4" />
-              Create Pet Profile
+              Edit profile
             </button>
-          )}
+
+            {/* Create Pet Profile — only visible for owner (user) profiles */}
+            {profile.profile_type?.toLowerCase() !== 'pet' && (
+              <button
+                onClick={() => setShowCreatePet(true)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-[#F7941D]/30 bg-transparent text-[#F7941D] hover:bg-[#F7941D]/5 active:scale-[0.98] flex items-center justify-center gap-2"
+                id="profile-create-pet-btn"
+              >
+                <PawPrint className="w-4 h-4" />
+                Create Pet Profile
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── Tabs ── */}
@@ -313,8 +315,8 @@ export default function ProfilePage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3 text-center text-sm font-semibold transition-colors cursor-pointer bg-transparent border-none ${activeTab === tab
-                  ? 'text-white'
-                  : 'text-white/40 hover:text-white/60'
+                ? 'text-white'
+                : 'text-white/40 hover:text-white/60'
                 }`}
             >
               {tab === 'posts' ? 'Posts' : tab === 'reposts' ? 'Reposts' : 'Saved'}
@@ -332,7 +334,7 @@ export default function ProfilePage() {
         </div>
 
         {/* ── Posts List ── */}
-        <div className="mt-4 border-1 border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden">
+        <div className="mt-0 sm:mt-4 border-0 sm:border-1 border-white/4 rounded-none sm:rounded-3xl bg-transparent sm:bg-[#181818]/70 sm:backdrop-blur-2xl shadow-none sm:shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden">
           {isListLoading ? (
             <ThreadFeedSkeleton />
           ) : currentList.length === 0 ? (

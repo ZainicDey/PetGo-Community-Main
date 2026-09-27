@@ -301,7 +301,7 @@ function CommentItem({
         content: replyText.trim(),
         image_url: imageUrl,
       }).unwrap();
-      
+
       setReplyText('');
       setReplyMedia(null);
       setShowReplyInput(false);
@@ -332,7 +332,7 @@ function CommentItem({
           image_url: finalImageUrl,
         },
       }).unwrap();
-      
+
       setIsEditing(false);
     } catch {
       // error
@@ -563,7 +563,7 @@ function CommentItem({
                 )}
               </button>
             )}
-            </div>
+          </div>
           {/* Inline reply input */}
           {showReplyInput && (
             <div className="mt-2.5 flex flex-col gap-2 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/5">
@@ -715,8 +715,9 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
         <div className="px-4 pb-2">
           {post.media[0].type === 'video' ? (
             <video
-              src={post.media[0].url}
-              className="w-full max-h-[380px] rounded-xl object-cover"
+              src={`${post.media[0].url}#t=0.001`}
+              preload="metadata"
+              className="w-full max-h-[280px] sm:max-h-[380px] rounded-xl object-cover"
             />
           ) : (
             <Image
@@ -725,7 +726,7 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
               width={680}
               height={380}
               unoptimized
-              className="w-full max-h-[380px] rounded-xl object-cover"
+              className="w-full max-h-[280px] sm:max-h-[380px] rounded-xl object-cover"
             />
           )}
         </div>
@@ -805,9 +806,9 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
   const [isDeleted, setIsDeleted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
-  const [selectedMedia, setSelectedMedia] = useState<{url: string; type: string} | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: string } | null>(null);
   const mounted = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => true,
     () => false
   );
@@ -971,12 +972,12 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
 
   const avatarColor = getAvatarColor(thread.author);
   const initials = thread.author[0]?.toUpperCase() ?? '?';
-  const viewCount = `${((thread.likes * 3.5 + thread.replies * 10) / 1000).toFixed(0)}K views`;
+
 
   return (
-    <div className="max-w-[680px] mx-auto px-4 pb-20">
+    <div className="max-w-[680px] mx-auto px-0 sm:px-4 pb-20">
       {/* ─── Header ─── */}
-      <div className="sticky top-0 z-10 bg-[#101010]/92 backdrop-blur-md pt-3 pb-3 mb-1">
+      <div className="sticky top-0 z-10 bg-[#101010]/92 backdrop-blur-md py-1.5 sm:py-3 mb-0 sm:mb-1 px-4 sm:px-0 border-b border-white/5 sm:border-b-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -987,18 +988,14 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               <BackArrowIcon />
             </button>
             <div>
-              <h1 className="text-[17px] font-bold text-white m-0 leading-tight">Thread</h1>
-              <span className="text-[12px] text-white/40 font-light">{viewCount}</span>
+              <h1 className="text-[17px] font-bold text-white m-0 leading-tight">PetGo</h1>
             </div>
           </div>
-          <button className="bg-white/8 border-none text-white/60 cursor-pointer p-2.5 rounded-full transition-colors hover:bg-white/15 hover:text-white">
-            <MoreIcon />
-          </button>
         </div>
       </div>
 
       {/* ─── Main card ─── */}
-      <div className="border border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-2">
+      <div className="border-0 sm:border border-white/4 rounded-none sm:rounded-3xl bg-transparent sm:bg-[#181818]/70 sm:backdrop-blur-2xl shadow-none sm:shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-0 sm:mt-2">
         {/* Original post */}
         <div className="px-5 pt-5 pb-2">
           {/* Author row */}
@@ -1076,7 +1073,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                         Delete
                       </button>
                     )}
-                    <button 
+                    <button
                       className="text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
                       onClick={async (e) => {
                         e.stopPropagation();
@@ -1137,13 +1134,14 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                   {thread.media.map((item, idx) => (
                     <CarouselItem
                       key={idx}
-                      className={`pl-2 ${thread.media!.length === 1 ? 'basis-full' : 'basis-auto'}`}
+                      className={`pl-2 flex items-center ${thread.media!.length === 1 ? 'basis-full' : 'basis-auto'}`}
                     >
                       {item.type === 'video' ? (
                         <video
-                          src={item.url}
+                          src={`${item.url}#t=0.001`}
+                          preload="metadata"
                           controls
-                          className={`rounded-xl shrink-0 select-none w-auto ${thread.media!.length === 1 ? 'h-auto max-w-full max-h-[380px]' : 'h-[280px] sm:h-[320px] max-w-none'}`}
+                          className={`rounded-xl shrink-0 select-none ${thread.media!.length === 1 ? 'w-auto h-auto max-w-full max-h-[280px] sm:max-h-[380px]' : 'w-auto h-[220px] sm:h-[320px] max-w-none'}`}
                         />
                       ) : (
                         <Image
@@ -1160,7 +1158,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                             }
                             setSelectedMedia(item);
                           }}
-                          className={`rounded-xl shrink-0 select-none cursor-pointer w-auto ${thread.media!.length === 1 ? 'h-auto max-w-full max-h-[380px]' : 'h-[280px] sm:h-[320px] max-w-none'}`}
+                          className={`rounded-xl shrink-0 select-none cursor-pointer ${thread.media!.length === 1 ? 'w-auto h-auto max-w-full max-h-[280px] sm:max-h-[380px]' : 'w-auto h-[220px] sm:h-[320px] max-w-none'}`}
                         />
                       )}
                     </CarouselItem>
@@ -1273,7 +1271,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                 </div>
               )}
             </div>
-            
+
             <div className="flex-1 flex flex-col gap-2 min-w-0">
               <div className="flex items-center gap-2">
                 <input
@@ -1285,7 +1283,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                   className="flex-1 bg-transparent border-none outline-none text-white/90 text-[14px] font-light placeholder:text-white/30 py-1"
                   id="thread-reply-input"
                 />
-                
+
                 <div className="flex items-center gap-1 shrink-0">
                   <label className="cursor-pointer text-white/40 hover:text-white/70 p-1.5 flex transition-colors">
                     <ImageAttachIcon />
@@ -1298,7 +1296,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                       }}
                     />
                   </label>
-                  <button 
+                  <button
                     className="bg-white text-black border-none rounded-full py-1.5 px-4 text-[13px] font-bold cursor-pointer transition-all hover:opacity-85 disabled:opacity-50 ml-1"
                     onClick={handlePostReply}
                     disabled={isPostingReply || (!replyText.trim() && !replyMedia)}
@@ -1307,7 +1305,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                   </button>
                 </div>
               </div>
-              
+
               {replyMedia && (
                 <div className="relative inline-block w-max">
                   <Image
@@ -1350,7 +1348,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
       </div>
 
       {mounted && selectedMedia && createPortal(
-        <div 
+        <div
           className="fixed inset-0 z-[9999] bg-black flex items-center justify-center cursor-pointer"
           onClick={() => setSelectedMedia(null)}
         >
@@ -1374,7 +1372,8 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
           </button>
           {selectedMedia.type === 'video' ? (
             <video
-              src={selectedMedia.url}
+              src={`${selectedMedia.url}#t=0.001`}
+              preload="metadata"
               controls
               autoPlay
               className="max-w-[95vw] max-h-[95vh] w-full h-full object-contain cursor-default"

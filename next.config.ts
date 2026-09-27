@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+const config: NextConfig = {
+  devIndicators: false,
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
@@ -11,4 +12,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default config;
