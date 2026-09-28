@@ -10,6 +10,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel';
+import { MentionText } from '@/components/ui/MentionsTextarea';
 import {
   useLikePostMutation,
   useUnlikePostMutation,
@@ -581,7 +582,7 @@ export default function ThreadCard({
             className="text-base font-extralight leading-relaxed text-white/95 mb-2.5 break-words tracking-wide cursor-pointer hover:text-white transition-colors"
             onClick={() => startTransition(() => router.push(`/community/thread/${thread.id}`))}
           >
-            {thread.content}
+            <MentionText text={thread.content ?? ''} />
           </p>
 
           {/* Quoted post embed */}

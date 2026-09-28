@@ -32,6 +32,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel';
+import { MentionsTextarea, MentionText } from '@/components/ui/MentionsTextarea';
 
 /* ── Avatar helpers ── */
 const AVATAR_COLORS = [
@@ -440,10 +441,10 @@ function CommentItem({
 
           {isEditing ? (
             <div className="mt-2 flex flex-col gap-2 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/5">
-              <textarea
+              <MentionsTextarea
                 value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full bg-transparent border-none outline-none text-white/90 text-[13px] font-light placeholder:text-white/30 resize-none min-h-[60px]"
+                onChangeText={(val) => setEditContent(val)}
+                className="w-full text-white/90 text-[13px] font-light placeholder:text-white/30 min-h-[60px]"
                 autoFocus
               />
               {(editMediaUrl || editMediaFile) && (
@@ -507,7 +508,7 @@ function CommentItem({
           ) : (
             <>
               <p className={`text-[14px] font-light leading-relaxed mb-1.5 break-words ${isDeleted ? 'text-white/30 italic' : 'text-white/90'}`}>
-                {isDeleted ? '[This comment has been deleted]' : comment.content}
+                {isDeleted ? '[This comment has been deleted]' : <MentionText text={comment.content} />}
               </p>
               {!isDeleted && comment.image_url && (
                 <div className="mt-2 mb-2">
@@ -568,14 +569,14 @@ function CommentItem({
           {showReplyInput && (
             <div className="mt-2.5 flex flex-col gap-2 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/5">
               <div className="flex items-center gap-2.5">
-                <input
-                  type="text"
+                <MentionsTextarea
                   value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
+                  onChangeText={(val) => setReplyText(val)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlePostInlineReply(); }}
                   placeholder={`Reply to ${authorName}...`}
-                  className="flex-1 bg-transparent border-none outline-none text-white/90 text-[13px] font-light placeholder:text-white/30 py-0.5"
+                  className="flex-1 text-white/90 text-[13px] font-light placeholder:text-white/30 py-0.5"
                   autoFocus
+                  rows={1}
                 />
                 <label className="cursor-pointer text-white/40 hover:text-white/70">
                   <ImageAttachIcon />
@@ -1119,7 +1120,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
 
           {/* Content */}
           <p className="text-[15px] font-light leading-relaxed text-white/95 mb-3 break-words tracking-wide">
-            {thread.content}
+            <MentionText text={thread.content ?? ''} />
           </p>
 
           {/* Quoted post embed */}
@@ -1279,14 +1280,14 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
 
             <div className="flex-1 flex flex-col gap-2 min-w-0">
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
+                <MentionsTextarea
                   value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
+                  onChangeText={(val) => setReplyText(val)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlePostReply(); }}
                   placeholder={`Reply to ${thread.author.toLowerCase().replace(/\s/g, '.')}...`}
-                  className="flex-1 bg-transparent border-none outline-none text-white/90 text-[14px] font-light placeholder:text-white/30 py-1"
+                  className="flex-1 text-white/90 text-[14px] font-light placeholder:text-white/30 py-1"
                   id="thread-reply-input"
+                  rows={1}
                 />
 
                 <div className="flex items-center gap-1 shrink-0">

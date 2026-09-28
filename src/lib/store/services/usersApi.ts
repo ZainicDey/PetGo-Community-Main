@@ -113,9 +113,9 @@ export const usersApi = api.injectEndpoints({
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: 'Post' as const, id })),
-              { type: 'Post', id: 'LIST' },
-            ]
+            ...result.map(({ id }) => ({ type: 'Post' as const, id })),
+            { type: 'Post', id: 'LIST' },
+          ]
           : [{ type: 'Post', id: 'LIST' }],
     }),
 
@@ -133,9 +133,9 @@ export const usersApi = api.injectEndpoints({
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: 'Post' as const, id })),
-              { type: 'Post', id: 'LIST' },
-            ]
+            ...result.map(({ id }) => ({ type: 'Post' as const, id })),
+            { type: 'Post', id: 'LIST' },
+          ]
           : [{ type: 'Post', id: 'LIST' }],
     }),
 
@@ -144,9 +144,9 @@ export const usersApi = api.injectEndpoints({
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: 'Activity' as const, id })),
-              { type: 'Activity', id: 'LIST' },
-            ]
+            ...result.map(({ id }) => ({ type: 'Activity' as const, id })),
+            { type: 'Activity', id: 'LIST' },
+          ]
           : [{ type: 'Activity', id: 'LIST' }],
     }),
 
@@ -159,9 +159,9 @@ export const usersApi = api.injectEndpoints({
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: 'Post' as const, id })),
-              { type: 'Post', id: 'SEARCH' },
-            ]
+            ...result.map(({ id }) => ({ type: 'Post' as const, id })),
+            { type: 'Post', id: 'SEARCH' },
+          ]
           : [{ type: 'Post', id: 'SEARCH' }],
     }),
 

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ImagePlus, X, ChevronDown } from 'lucide-react';
 import { useGetProfileQuery } from '@/lib/store/services/usersApi';
 import type { Thread } from './ThreadCard';
+import { MentionsTextarea } from '@/components/ui/MentionsTextarea';
 
 interface NewThreadModalProps {
   onClose: () => void;
@@ -33,7 +34,7 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
   const [audience, setAudience] = useState<'anyone' | 'followers'>('anyone');
   const [isAudienceOpen, setIsAudienceOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
 
   const { data: profile } = useGetProfileQuery();
   const avatarUrl = profile?.profile_picture_url;
@@ -46,15 +47,6 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
       filesData.forEach((data) => URL.revokeObjectURL(data.url));
     };
   }, [filesData]);
-
-  /* Auto-grow textarea */
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    }
-  }, [text]);
 
   const handlePost = async () => {
     if (!text.trim() && filesData.length === 0 && !quotedThread) return;
@@ -138,14 +130,13 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
             {/* Compose area */}
             <div className="flex-1 flex flex-col min-w-0 pt-0.5">
               <span className="text-[15px] font-semibold text-white">{username}</span>
-              <textarea
-                ref={textareaRef}
+              <MentionsTextarea
                 id="community-new-thread-textarea"
-                className="w-full bg-transparent border-none outline-none text-white/90 text-[15px] font-light resize-none leading-relaxed min-h-[44px] placeholder:text-white/35 mt-0.5"
+                className="w-full text-white/90 text-[15px] font-light leading-relaxed min-h-[44px] mt-0.5"
                 placeholder="What's new?"
                 value={text}
-                onChange={(e) => {
-                  if (e.target.value.length <= MAX_CHARS) setText(e.target.value);
+                onChangeText={(val) => {
+                  if (val.length <= MAX_CHARS) setText(val);
                 }}
                 autoFocus
               />
