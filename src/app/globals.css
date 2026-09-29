@@ -76,3 +76,16 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ── iOS Safari auto-zoom prevention ──
+   Safari zooms in when an input/textarea has font-size < 16px.
+   This rule bumps interactive form elements to 16px on touch devices
+   without affecting desktop layout.  The @supports query is the most
+   reliable WebKit-only feature check available.                      */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
