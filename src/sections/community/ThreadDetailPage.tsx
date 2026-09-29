@@ -1175,7 +1175,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
           ) : null}
 
           {/* Engagement bar */}
-          <div className="flex items-center gap-4 py-2">
+          <div className="flex items-center justify-between sm:justify-start sm:gap-4 py-2 w-full">
             <button
               className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${liked ? 'text-[#e0245e] hover:bg-[#e0245e]/10' : 'text-white/50 hover:text-white/85'}`}
               onClick={handleLikeToggle}

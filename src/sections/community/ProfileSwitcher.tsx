@@ -78,10 +78,9 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
     }
   };
 
-  if (!profile) return null;
-
-  const avatarBg = getAvatarColor(profile.username);
-  const initials = profile.username[0]?.toUpperCase() || '?';
+  const hasProfile = !!profile;
+  const avatarBg = profile ? getAvatarColor(profile.username) : '#333333';
+  const initials = profile ? (profile.username[0]?.toUpperCase() || '?') : '';
 
   const otherProfiles =
     switchableData?.profiles.filter(
@@ -219,6 +218,10 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
           ref: triggerRef,
           onClick: (e: React.MouseEvent) => {
             e.preventDefault();
+            if (!hasProfile) {
+              router.push('/complete-profile');
+              return;
+            }
             setIsOpen((prev) => !prev);
             if (isOpen) setShowProfiles(false);
           }
@@ -228,6 +231,10 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
           ref={triggerRef}
           id={`profile-switcher-trigger${isMobile ? '-mobile' : ''}`}
           onClick={() => {
+            if (!hasProfile) {
+              router.push('/complete-profile');
+              return;
+            }
             setIsOpen((prev) => !prev);
             if (isOpen) setShowProfiles(false);
           }}
@@ -240,13 +247,17 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
           <>
             <div
               className="w-[32px] h-[32px] sm:w-[22px] sm:h-[22px] rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-              style={!profile.profile_picture_url ? { backgroundColor: avatarBg } : undefined}
+              style={(!profile || !profile.profile_picture_url) ? { backgroundColor: avatarBg } : undefined}
             >
-              {profile.profile_picture_url ? (
+              {profile && profile.profile_picture_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={profile.profile_picture_url} alt={profile.username} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[10px] font-bold text-white">{initials}</span>
+                <span className="text-[10px] font-bold text-white">
+                  {!hasProfile ? (
+                    <div className="w-full h-full bg-white/10 animate-pulse rounded-full" />
+                  ) : initials}
+                </span>
               )}
             </div>
             <span className="hidden leading-none tracking-tight text-white font-normal" style={{ fontSize: 'var(--nav-btn-font-size)' }}>
@@ -259,12 +270,12 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
             <div
               className="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center border-2 border-white/10 group-hover:border-white/20 transition-colors"
               style={
-                !profile.profile_picture_url
+                (!profile || !profile.profile_picture_url)
                   ? { backgroundColor: avatarBg }
                   : undefined
               }
             >
-              {profile.profile_picture_url ? (
+              {profile && profile.profile_picture_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={profile.profile_picture_url}
@@ -272,13 +283,17 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-sm font-bold text-white">{initials}</span>
+                <span className="text-sm font-bold text-white">
+                  {!hasProfile ? (
+                    <div className="w-full h-full bg-white/10 animate-pulse rounded-full" />
+                  ) : initials}
+                </span>
               )}
             </div>
 
             {/* Username (desktop only) */}
             <span className="hidden lg:block text-sm text-white/70 group-hover:text-white/90 font-medium truncate flex-1 text-left transition-colors">
-              {profile.username}
+              {profile ? profile.username : 'Setup Profile'}
             </span>
 
             {/* Chevron (desktop only) */}

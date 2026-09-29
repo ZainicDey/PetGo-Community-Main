@@ -673,7 +673,7 @@ export default function ThreadCard({
           ) : null}
 
           {/* Actions */}
-          <div className="flex items-center gap-4 mt-1">
+          <div className="flex items-center justify-between sm:justify-start sm:gap-4 mt-1 w-full">
             <button
               className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${liked ? 'text-[#e0245e] hover:bg-[#e0245e]/10' : 'text-white/50 hover:text-white/85'}`}
               onClick={handleLike}
