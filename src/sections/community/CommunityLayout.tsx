@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, startTransition, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
@@ -244,6 +244,12 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
   const pathname = usePathname();
   useGetMeQuery();
 
+  /** Navigates without blocking the UI — keeps the shell responsive. */
+  const navigate = useCallback(
+    (href: string) => startTransition(() => router.push(href)),
+    [router],
+  );
+
   /* Close activity popover on outside click */
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -339,7 +345,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
             return (
               <button
                 key={item.id}
-                onClick={() => router.push(item.href)}
+                onClick={() => navigate(item.href)}
                 className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold sm:bg-white/10' : 'text-white font-normal'}`}
                 style={{
                   width: 'var(--nav-btn-width)',
@@ -370,7 +376,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
             return (
               <button
                 key={item.id}
-                onClick={() => router.push(item.href)}
+                onClick={() => navigate(item.href)}
                 className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold sm:bg-white/10' : 'text-white font-normal'}`}
                 style={{
                   width: 'var(--nav-btn-width)',
@@ -425,7 +431,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 fontSize: 'var(--nav-btn-font-size)',
               }}
               id="community-nav-activity"
-              onClick={() => router.push('/community/activity')}
+              onClick={() => navigate('/community/activity')}
             >
               <span className="flex items-center justify-center shrink-0 w-[22px] h-[22px]">
                 {activeNav === 'activity' ? <ActivityFilledIcon /> : <ActivityOutlineIcon />}
@@ -446,7 +452,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                 ].map((sub) => (
                   <button
                     key={sub.id}
-                    onClick={() => router.push(sub.href)}
+                    onClick={() => navigate(sub.href)}
                     className={`flex items-center justify-start lg:pl-12 rounded-lg transition-all bg-transparent border-none cursor-pointer font-inherit p-0 ${activeActivitySub === sub.id
                       ? 'text-[#ffe1bd] font-semibold bg-white/10'
                       : 'text-white/60 hover:text-white/90 hover:bg-white/5'
@@ -486,7 +492,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
                           key={sub.id}
                           onClick={() => {
                             setShowActivityPopover(false);
-                            router.push(sub.href);
+                            navigate(sub.href);
                           }}
                           className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors cursor-pointer bg-transparent border-none text-left ${isSubActive
                             ? 'text-[#ffe1bd] font-semibold bg-white/5'
@@ -533,7 +539,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
             const btn = (
               <button
                 key={item.id}
-                onClick={() => router.push(item.href)}
+                onClick={() => navigate(item.href)}
                 className={`${navBtnBaseClass} ${isActive ? 'text-[#ffe1bd] font-semibold sm:bg-white/10' : 'text-white font-normal'} sm:mt-6`}
                 style={{
                   width: 'var(--nav-btn-width)',

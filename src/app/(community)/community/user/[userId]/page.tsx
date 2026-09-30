@@ -1,5 +1,4 @@
 import UserProfilePage from '@/sections/community/UserProfilePage';
-import CommunityLayout from '@/sections/community/CommunityLayout';
 import type { Metadata } from 'next';
 
 interface PageProps {
@@ -18,9 +17,5 @@ export default async function UserProfileRoute({ params }: PageProps) {
   const { userId } = await params;
   const numericId = Number(userId);
 
-  return (
-    <CommunityLayout>
-      <UserProfilePage userId={numericId} />
-    </CommunityLayout>
-  );
+  return <UserProfilePage userId={numericId} />;
 }

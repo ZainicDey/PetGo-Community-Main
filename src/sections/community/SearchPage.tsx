@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   useSearchUsersQuery,
@@ -270,9 +270,9 @@ export default function SearchPage() {
                   className="flex items-center gap-4 px-2 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors rounded-xl cursor-pointer"
                   onClick={() => {
                     if (user.id === profile?.user_id) {
-                      router.push('/community/profile');
+                      startTransition(() => router.push('/community/profile'));
                     } else {
-                      router.push(`/community/user/${user.id}`);
+                      startTransition(() => router.push(`/community/user/${user.id}`));
                     }
                   }}
                 >

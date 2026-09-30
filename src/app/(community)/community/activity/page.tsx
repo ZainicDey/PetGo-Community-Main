@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
 import ActivityPage from '@/sections/community/ActivityPage';
-import CommunityLayout from '@/sections/community/CommunityLayout';
 
 export const metadata: Metadata = {
   title: 'My Activity - PetGo Community',
@@ -8,9 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Activity() {
-  return (
-    <CommunityLayout>
-      <ActivityPage />
-    </CommunityLayout>
-  );
+  return <ActivityPage />;
 }

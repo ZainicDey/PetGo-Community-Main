@@ -1,5 +1,4 @@
 import SearchPage from '@/sections/community/SearchPage';
-import CommunityLayout from '@/sections/community/CommunityLayout';
 
 export const metadata = {
   title: 'Search | PetGo Community',
@@ -7,9 +6,5 @@ export const metadata = {
 };
 
 export default function SearchRoute() {
-  return (
-    <CommunityLayout>
-      <SearchPage />
-    </CommunityLayout>
-  );
+  return <SearchPage />;
 }

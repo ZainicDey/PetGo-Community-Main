@@ -1,5 +1,4 @@
 import ThreadDetailPage from "@/sections/community/ThreadDetailPage";
-import CommunityLayout from "@/sections/community/CommunityLayout";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -9,9 +8,5 @@ interface PageProps {
 export default async function ThreadPage({ params }: PageProps) {
   const { id } = await params;
 
-  return (
-    <CommunityLayout>
-      <ThreadDetailPage threadId={id} />
-    </CommunityLayout>
-  );
+  return <ThreadDetailPage threadId={id} />;
 }

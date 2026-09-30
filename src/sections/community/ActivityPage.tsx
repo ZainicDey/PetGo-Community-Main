@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGetMeQuery, useGetUserActivityQuery, useGetProfileQuery } from '@/lib/store/services/usersApi';
 import { useUnlikePostMutation, useUndoRepostMutation } from '@/lib/store/services/postsApi';
@@ -51,7 +51,7 @@ export default function ActivityPage() {
   };
 
   const handleRowClick = (postId: number) => {
-    router.push(`/community/thread/${postId}`);
+    startTransition(() => router.push(`/community/thread/${postId}`));
   };
 
   return (

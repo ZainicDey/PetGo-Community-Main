@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronUp, UserCircle, ArrowLeftRight } from 'lucide-react';
 import {
@@ -70,7 +70,7 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
       dispatch(api.util.resetApiState());
       setIsOpen(false);
       setShowProfiles(false);
-      router.push('/');
+      startTransition(() => router.push('/'));
     } catch (err) {
       console.error('Failed to switch profile:', err);
     } finally {
@@ -108,7 +108,7 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
                 id="profile-switcher-my-profile"
                 onClick={() => {
                   setIsOpen(false);
-                  router.push('/community/profile');
+                  startTransition(() => router.push('/community/profile'));
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors cursor-pointer bg-transparent border-none text-left"
               >
@@ -219,7 +219,7 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
           onClick: (e: React.MouseEvent) => {
             e.preventDefault();
             if (!hasProfile) {
-              router.push('/complete-profile');
+              startTransition(() => router.push('/complete-profile'));
               return;
             }
             setIsOpen((prev) => !prev);
@@ -232,7 +232,7 @@ export default function ProfileSwitcher({ className, isMobile, customTrigger }: 
           id={`profile-switcher-trigger${isMobile ? '-mobile' : ''}`}
           onClick={() => {
             if (!hasProfile) {
-              router.push('/complete-profile');
+              startTransition(() => router.push('/complete-profile'));
               return;
             }
             setIsOpen((prev) => !prev);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useSyncExternalStore } from 'react';
+import React, { useState, useSyncExternalStore, startTransition } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -675,7 +675,7 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
       className="mt-2 mb-2 border border-white/10 rounded-2xl overflow-hidden bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer"
       onClick={(e) => {
         e.stopPropagation();
-        router.push(`/community/thread/${post.id}`);
+        startTransition(() => router.push(`/community/thread/${post.id}`));
       }}
     >
       <div className="px-4 pt-3 pb-1">
@@ -1006,7 +1006,17 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
         <div className="px-5 pt-5 pb-2">
           {/* Author row */}
           <div className="flex items-center gap-3 mb-3">
-            <div className="relative">
+            <div 
+              className="relative cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (thread.isOwn) {
+                  startTransition(() => router.push('/community/profile'));
+                } else if (thread.authorId !== undefined) {
+                  startTransition(() => router.push(`/community/user/${thread.authorId}`));
+                }
+              }}
+            >
               {thread.avatar ? (
                 <Image src={thread.avatar} alt={thread.author} width={44} height={44} className="w-11 h-11 rounded-full object-cover" />
               ) : (
@@ -1031,7 +1041,17 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               )}
             </div>
             <div className="flex items-baseline gap-2 flex-1 min-w-0">
-              <span className="text-[15px] font-semibold text-white flex items-center gap-1.5">
+              <span 
+                className="text-[15px] font-semibold text-white flex items-center gap-1.5 cursor-pointer hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (thread.isOwn) {
+                    startTransition(() => router.push('/community/profile'));
+                  } else if (thread.authorId !== undefined) {
+                    startTransition(() => router.push(`/community/user/${thread.authorId}`));
+                  }
+                }}
+              >
                 {thread.author}
                 {thread.isPetProfile && (
                   <span className="inline-flex items-center justify-center bg-[#d4d4d4] rounded-full w-[15px] h-[15px] ml-1.5 relative -top-[1px]">
@@ -1175,7 +1195,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
           ) : null}
 
           {/* Engagement bar */}
-          <div className="flex items-center justify-between sm:justify-start sm:gap-4 py-2 w-full">
+          <div className="flex items-center justify-start gap-4 sm:gap-4 py-2 w-full flex-wrap">
             <button
               className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${liked ? 'text-[#e0245e] hover:bg-[#e0245e]/10' : 'text-white/50 hover:text-white/85'}`}
               onClick={handleLikeToggle}

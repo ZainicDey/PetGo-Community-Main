@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   useGetFollowersQuery,
@@ -160,9 +160,9 @@ export default function FollowersModal({
                   onClick={() => {
                     onClose();
                     if (user.id === profile?.user_id) {
-                      router.push('/community/profile');
+                      startTransition(() => router.push('/community/profile'));
                     } else {
-                      router.push(`/community/user/${user.id}`);
+                      startTransition(() => router.push(`/community/user/${user.id}`));
                     }
                   }}
                 >

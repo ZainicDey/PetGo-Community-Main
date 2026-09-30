@@ -673,7 +673,7 @@ export default function ThreadCard({
           ) : null}
 
           {/* Actions */}
-          <div className="flex items-center justify-between sm:justify-start sm:gap-4 mt-1 w-full">
+          <div className="flex items-center justify-start gap-4 sm:gap-4 mt-1 w-full flex-wrap">
             <button
               className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:bg-white/5 ${liked ? 'text-[#e0245e] hover:bg-[#e0245e]/10' : 'text-white/50 hover:text-white/85'}`}
               onClick={handleLike}
@@ -692,7 +692,7 @@ export default function ThreadCard({
               className="flex items-center gap-1.5 bg-transparent border-none text-white/50 cursor-pointer py-1 px-1.5 rounded-lg text-sm transition-all font-inherit hover:text-white/85 hover:bg-white/5"
               aria-label="Reply"
               id={`thread-reply-${thread.id}`}
-              onClick={(e) => { e.stopPropagation(); router.push(`/community/thread/${thread.id}`); }}
+              onClick={(e) => { e.stopPropagation(); startTransition(() => router.push(`/community/thread/${thread.id}`)); }}
             >
               <div className="w-5 h-5 shrink-0">
                 <CommentIcon />

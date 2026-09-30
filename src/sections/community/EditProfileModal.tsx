@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera, User, ChevronDown, Trash2 } from 'lucide-react';
 import {
@@ -83,7 +83,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     try {
       await deletePetProfile().unwrap();
       onClose();
-      router.push('/community/profile');
+      startTransition(() => router.push('/community/profile'));
     } catch (err) {
       const apiError = err as { data?: { detail?: string }; status?: number };
       setError(

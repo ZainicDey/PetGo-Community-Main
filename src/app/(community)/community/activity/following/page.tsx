@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
 import FollowingFeedPage from '@/sections/community/FollowingFeedPage';
-import CommunityLayout from '@/sections/community/CommunityLayout';
 
 export const metadata: Metadata = {
   title: 'Following - PetGo Community',
@@ -8,9 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function FollowingRoute() {
-  return (
-    <CommunityLayout>
-      <FollowingFeedPage />
-    </CommunityLayout>
-  );
+  return <FollowingFeedPage />;
 }
