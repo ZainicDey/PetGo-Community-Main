@@ -4,7 +4,8 @@ import React, { startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGetMeQuery, useGetUserActivityQuery, useGetProfileQuery } from '@/lib/store/services/usersApi';
 import { useUnlikePostMutation, useUndoRepostMutation } from '@/lib/store/services/postsApi';
-import type { ApiPost, ApiProfile } from '@/lib/store/types';
+import { useFirstVisitSkeleton } from '@/lib/hooks/useFirstVisitSkeleton';
+import { useRoutePreloader } from '@/lib/hooks/useRoutePreloader';
 
 function formatRelativeTime(dateString: string) {
   const safeDate = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
@@ -27,8 +28,13 @@ function formatRelativeTime(dateString: string) {
 export default function ActivityPage() {
   const router = useRouter();
   
+  // Perceived performance: show skeleton for 1s on first visit
+  const showFirstVisitSkeleton = useFirstVisitSkeleton('activity', 1000);
+  // Preload feed and profile data in the background
+  useRoutePreloader('activity');
+
   const { data: me } = useGetMeQuery();
-  const { data: profile } = useGetProfileQuery();
+  useGetProfileQuery();
 
   const { data: activityList, isLoading: isActivityLoading, isError: isActivityError } = useGetUserActivityQuery(me?.id as number, {
     skip: !me?.id,
@@ -62,7 +68,7 @@ export default function ActivityPage() {
       </div>
 
       <div className="border border-white/4 max-sm:border-0 rounded-3xl max-sm:rounded-none bg-[#181818]/70 max-sm:bg-transparent backdrop-blur-2xl max-sm:backdrop-blur-none shadow-[0_8px_32px_rgba(255,255,255,0.022)] max-sm:shadow-none overflow-hidden mt-4 max-sm:mt-0">
-        {isActivityLoading ? (
+        {(showFirstVisitSkeleton || isActivityLoading) ? (
           <div className="flex flex-col">
             {Array.from({ length: 5 }).map((_, i) => (
               <div

@@ -13,6 +13,8 @@ import {
 import ThreadCard, { type Thread } from './ThreadCard';
 import ThreadFeedSkeleton from './ThreadSkeleton';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
+import { useFirstVisitSkeleton } from '@/lib/hooks/useFirstVisitSkeleton';
+import { useRoutePreloader } from '@/lib/hooks/useRoutePreloader';
 
 type SearchTab = 'profiles' | 'top';
 
@@ -123,6 +125,11 @@ export default function SearchPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('profiles');
 
+  // Perceived performance: show skeleton for 1s on first visit
+  const showFirstVisitSkeleton = useFirstVisitSkeleton('search', 1000);
+  // Preload feed and profile data in the background
+  useRoutePreloader('search');
+
   // 1 second debounce for search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -179,6 +186,33 @@ export default function SearchPage() {
   const postsAsThreads = postResults.map((p) => mapApiPostToThread(p, profile));
 
   const hasQuery = debouncedSearchTerm.trim() !== '';
+
+  if (showFirstVisitSkeleton) {
+    return (
+      <div className="max-w-[680px] mx-auto px-4 pb-20 pt-5">
+        <div className="animate-pulse">
+          {/* Search bar skeleton */}
+          <div className="h-[52px] bg-[#181818] rounded-full mb-4" />
+          {/* Tabs skeleton */}
+          <div className="flex border-b border-white/10 mb-4">
+            <div className="flex-1 h-10 bg-white/5 rounded" />
+            <div className="flex-1 h-10 bg-white/5 rounded" />
+          </div>
+          {/* Profile list skeleton */}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-2 py-3">
+              <div className="w-12 h-12 rounded-full bg-white/10" />
+              <div className="flex-1 space-y-2.5">
+                <div className="h-3.5 bg-white/10 rounded w-32" />
+                <div className="h-2.5 bg-white/5 rounded w-24" />
+              </div>
+              <div className="h-9 w-[100px] bg-white/10 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[680px] mx-auto px-4 pb-20 pt-5">

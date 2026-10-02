@@ -8,6 +8,8 @@ import { useGetProfileQuery, useGetUserLikesQuery } from '@/lib/store/services/u
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
 import { uploadMediaToCloudinary } from '@/lib/utils/upload';
 import Image from 'next/image';
+import { useFirstVisitSkeleton } from '@/lib/hooks/useFirstVisitSkeleton';
+import { useRoutePreloader } from '@/lib/hooks/useRoutePreloader';
 
 type FeedTab = 'foryou' | 'following';
 
@@ -72,6 +74,11 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
 export default function CommunityFeed() {
   const [activeTab, setActiveTab] = useState<FeedTab>('foryou');
   const [localThreads, setLocalThreads] = useState<Thread[]>([]);
+
+  // Perceived performance: show skeleton for 1s on first visit
+  const showFirstVisitSkeleton = useFirstVisitSkeleton('feed', 1000);
+  // Preload profile, search, and activity data in the background
+  useRoutePreloader('feed');
 
   const { data: posts, isLoading: isLoadingFeed, isError: isErrorFeed } = useGetPostsQuery({ limit: 20, offset: 0 });
   const [createPost] = useCreatePostMutation();
@@ -234,7 +241,7 @@ export default function CommunityFeed() {
         </div>
 
         {/* Thread List */}
-        {isLoading ? (
+        {(showFirstVisitSkeleton || isLoading) ? (
           <ThreadFeedSkeleton />
         ) : isError ? (
           <div className="text-center py-16 text-white/40">

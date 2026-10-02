@@ -9,6 +9,8 @@ import EditProfileModal from './EditProfileModal';
 import CreatePetProfileModal from './CreatePetProfileModal';
 import { useGetProfileQuery, useGetUserPostsQuery, useGetUserRepostsQuery, useGetUserSavedPostsQuery, useUpdateProfileMutation } from '@/lib/store/services/usersApi';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
+import { useFirstVisitSkeleton } from '@/lib/hooks/useFirstVisitSkeleton';
+import { useRoutePreloader } from '@/lib/hooks/useRoutePreloader';
 
 type ProfileTab = 'posts' | 'reposts' | 'saved';
 
@@ -97,6 +99,11 @@ export default function ProfilePage() {
   const [showCreatePet, setShowCreatePet] = useState(false);
   const [isUploadingPfp, setIsUploadingPfp] = useState(false);
 
+  // Perceived performance: show skeleton for 1s on first visit
+  const showFirstVisitSkeleton = useFirstVisitSkeleton('profile', 1000);
+  // Preload feed data in the background
+  useRoutePreloader('profile');
+
   const {
     data: profile,
     isLoading: profileLoading,
@@ -163,7 +170,7 @@ export default function ProfilePage() {
 
   const isListLoading = activeTab === 'posts' ? isPostsLoading : activeTab === 'reposts' ? isRepostsLoading : isSavedLoading;
 
-  if (profileLoading) {
+  if (showFirstVisitSkeleton || profileLoading) {
     return (
       <div className="max-w-[620px] mx-auto py-8 px-4">
         <div className="animate-pulse flex flex-col gap-6">
