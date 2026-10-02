@@ -447,6 +447,7 @@ export default function ThreadCard({
                 alt={thread.author}
                 width={40}
                 height={40}
+                unoptimized
                 className="w-10 h-10 rounded-full object-cover block"
               />
             ) : (

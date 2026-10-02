@@ -1018,7 +1018,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
               }}
             >
               {thread.avatar ? (
-                <Image src={thread.avatar} alt={thread.author} width={44} height={44} className="w-11 h-11 rounded-full object-cover" />
+                <Image src={thread.avatar} alt={thread.author} width={44} height={44} unoptimized className="w-11 h-11 rounded-full object-cover" />
               ) : (
                 <div
                   className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold text-white"

@@ -250,6 +250,17 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
     [router],
   );
 
+  /* Eagerly prefetch the main routes on mount so transitions are instant */
+  useEffect(() => {
+    router.prefetch('/');
+    router.prefetch('/community/search');
+    router.prefetch('/community/activity');
+    router.prefetch('/community/activity/liked');
+    router.prefetch('/community/activity/following');
+    router.prefetch('/community/activity/saved');
+    router.prefetch('/community/profile');
+  }, [router]);
+
   /* Close activity popover on outside click */
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

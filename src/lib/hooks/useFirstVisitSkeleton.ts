@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * Tracks which route keys have been visited during this browser session.
@@ -17,28 +17,25 @@ const visitedRoutes = new Set<string>();
  * @param durationMs — how long to show the skeleton (default: 1000ms)
  */
 export function useFirstVisitSkeleton(routeKey: string, durationMs = 1000): boolean {
-  // Compute initial value synchronously — no effect needed for repeat visits
-  const [showSkeleton, setShowSkeleton] = useState(
-    () => !visitedRoutes.has(routeKey),
-  );
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Mark the route visited inside the initializer so it only happens once,
+  // even if React Strict Mode double-invokes the component body.
+  const [showSkeleton, setShowSkeleton] = useState(() => {
+    if (visitedRoutes.has(routeKey)) return false;
+    visitedRoutes.add(routeKey);
+    return true;
+  });
 
   useEffect(() => {
-    if (!visitedRoutes.has(routeKey)) {
-      visitedRoutes.add(routeKey);
-      timerRef.current = setTimeout(() => {
-        setShowSkeleton(false);
-      }, durationMs);
-    }
+    if (!showSkeleton) return;
 
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-    // Only run on mount — routeKey and durationMs should be stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Always create a fresh timer — survives Strict Mode's cleanup→re-run cycle
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, durationMs);
+
+    return () => clearTimeout(timer);
+  }, [showSkeleton, durationMs]);
 
   return showSkeleton;
 }
+

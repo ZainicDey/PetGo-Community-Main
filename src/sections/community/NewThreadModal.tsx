@@ -118,7 +118,7 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
             <div className="flex flex-col items-center shrink-0">
               <div className="w-10 h-10 rounded-full bg-[#242424] flex items-center justify-center overflow-hidden">
                 {avatarUrl ? (
-                  <Image src={avatarUrl} alt="Your avatar" width={40} height={40} className="w-full h-full object-cover" />
+                  <Image src={avatarUrl} alt="Your avatar" width={40} height={40} unoptimized className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-sm font-bold text-white/60">{initials}</span>
                 )}
@@ -221,7 +221,7 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
             <div className="w-10 flex justify-center shrink-0">
               <div className="w-5 h-5 rounded-full bg-[#242424] flex items-center justify-center overflow-hidden opacity-40">
                 {avatarUrl ? (
-                  <Image src={avatarUrl} alt="" width={20} height={20} className="w-full h-full object-cover" />
+                  <Image src={avatarUrl} alt="" width={20} height={20} unoptimized className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-[9px] font-bold text-white/60">{initials}</span>
                 )}
