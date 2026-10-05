@@ -27,6 +27,7 @@ export interface ApiPost {
   is_liked?: boolean;
   is_reposted?: boolean;
   is_saved?: boolean;
+  visibility?: 'public' | 'followers';
   quoted_post_id?: number | null;
   quoted_post?: ApiPost | null;
   reposter?: {
@@ -54,6 +55,8 @@ export interface ApiProfile {
   username: string;
   profile_picture_url?: string;
   follower_count?: number;
+  following_count?: number;
+  is_following?: boolean;
 }
 
 export interface UserBasicInfo {

@@ -6,13 +6,12 @@ import ThreadCard, { type Thread } from './ThreadCard';
 import ThreadFeedSkeleton from './ThreadSkeleton';
 import FollowersModal from './FollowersModal';
 import {
-  useGetProfileQuery,
+  useGetMeQuery,
   useGetUserProfileQuery,
   useGetUserPostsQuery,
   useGetUserRepostsQuery,
   useFollowUserMutation,
   useUnfollowUserMutation,
-  useGetFollowingQuery,
 } from '@/lib/store/services/usersApi';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
 
@@ -93,6 +92,7 @@ function mapApiPostToThread(
     followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet' || profile?.profile_type === 'pet',
     petType: post.author?.pet_type || profile?.pet_type,
+    visibility: post.visibility,
   };
 }
 
@@ -106,14 +106,14 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
   const [showFollowers, setShowFollowers] = useState(false);
 
   /* Fetch the logged-in user's own profile to detect self-visits */
-  const { data: myProfile } = useGetProfileQuery();
+  const { data: me, isLoading: meLoading } = useGetMeQuery();
 
   /* Redirect to own profile page if viewing own user ID */
   useEffect(() => {
-    if (myProfile && myProfile.user_id === userId) {
+    if (me && me.id === userId) {
       router.replace('/community/profile');
     }
-  }, [myProfile, userId, router]);
+  }, [me, userId, router]);
 
   /* Fetch target user's profile */
   const {
@@ -123,22 +123,25 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
   } = useGetUserProfileQuery(userId);
 
   /* Fetch target user's posts */
-  const { data: userPosts = [], isLoading: isPostsLoading } = useGetUserPostsQuery(userId);
+  const { data: userPosts = [], isLoading: isPostsLoading } = useGetUserPostsQuery(userId, { skip: activeTab !== 'posts' });
 
   /* Fetch target user's reposts */
-  const { data: reposts = [], isLoading: isRepostsLoading } = useGetUserRepostsQuery(userId);
+  const { data: reposts = [], isLoading: isRepostsLoading } = useGetUserRepostsQuery(userId, { skip: activeTab !== 'reposts' });
 
   /* Follow state management */
-  const { data: myFollowing = [] } = useGetFollowingQuery(
-    myProfile?.user_id ?? 0,
-    { skip: !myProfile?.user_id },
-  );
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useUnfollowUserMutation();
   const [localFollowState, setLocalFollowState] = useState<boolean | null>(null);
 
-  const isCurrentlyFollowing = myFollowing.some((f) => f.id === userId);
+  const isCurrentlyFollowing = userProfile?.is_following ?? false;
   const isFollowed = localFollowState ?? isCurrentlyFollowing;
+
+  let displayedFollowerCount = userProfile?.follower_count ?? 0;
+  if (localFollowState === true && !isCurrentlyFollowing) {
+    displayedFollowerCount += 1;
+  } else if (localFollowState === false && isCurrentlyFollowing) {
+    displayedFollowerCount -= 1;
+  }
 
   const handleFollow = async () => {
     setLocalFollowState(true);
@@ -166,8 +169,10 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
 
   const isListLoading = activeTab === 'posts' ? isPostsLoading : isRepostsLoading;
 
+  const isPageLoading = profileLoading || meLoading;
+
   /* ── Loading skeleton ── */
-  if (profileLoading) {
+  if (isPageLoading) {
     return (
       <div className="max-w-[620px] mx-auto py-8 px-4">
         <div className="animate-pulse flex flex-col gap-6">
@@ -301,10 +306,10 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
             className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/60 transition-colors cursor-pointer bg-transparent border-none p-0 mb-4"
           >
             <span className="font-semibold text-white/60">
-              {userProfile.follower_count ?? 0}
+              {displayedFollowerCount}
             </span>
             <span>
-              {(userProfile.follower_count ?? 0) === 1
+              {displayedFollowerCount === 1
                 ? 'follower'
                 : 'followers'}
             </span>

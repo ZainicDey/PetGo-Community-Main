@@ -68,6 +68,7 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet',
     petType: post.author?.pet_type,
+    visibility: post.visibility,
   };
 }
 
@@ -140,6 +141,7 @@ export default function CommunityFeed() {
       time: 'now',
       isOwn: true,
       quotedPost: quotedThread,
+      visibility: (visibility as 'public' | 'followers') || 'public',
     };
     setLocalThreads((prev) => [tempThread, ...prev]);
 

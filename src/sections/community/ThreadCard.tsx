@@ -53,6 +53,7 @@ export interface Thread {
   isSaved?: boolean;
   isPetProfile?: boolean;
   petType?: string;
+  visibility?: 'public' | 'followers';
 }
 
 interface ThreadCardProps {
@@ -161,6 +162,21 @@ const FishIcon = () => (
   </svg>
 );
 
+const PublicIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] text-inherit relative -top-[1px]" aria-label="Public post">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
+  </svg>
+);
+
+const FollowersIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[15px] h-[15px] text-inherit relative -top-[1px]" aria-label="Followers only post">
+    <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0-8a3 3 0 1 1-3 3 3 3 0 0 1 3-3zm0 10c-2.7 0-8 1.35-8 4v2h16v-2c0-2.65-5.3-4-8-4zm-6 4c.2-.71 3.3-2 6-2s5.8 1.29 6 2z" />
+    <path d="M17 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0-6a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm0 8c-1.86 0-3.86.67-4.94 1.54A6.19 6.19 0 0 1 13 18v2h8v-2c0-1.85-3.7-4-4-4z" />
+  </svg>
+);
+
 const BirdIcon = () => (
   <span style={{ fontSize: '9px', lineHeight: 1, position: 'relative', top: '1px' }} aria-label="Bird profile">
     🐥
@@ -223,7 +239,10 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
             )}
           </div>
           <span className="text-[13px] font-semibold text-white">{post.author}</span>
-          <span className="text-[13px] text-white/35">{post.time}</span>
+          <span className="text-[13px] text-white/35 flex items-center gap-1">
+            {post.time}
+            {post.visibility === 'followers' ? <FollowersIcon /> : <PublicIcon />}
+          </span>
         </div>
 
         {/* Content */}
@@ -500,7 +519,10 @@ export default function ThreadCard({
               )}
             </span>
             {/* <span className="text-sm text-white/40">@{thread.handle}</span> */}
-            <span className="text-[15px] text-white/35">{thread.time}</span>
+            <span className="text-[15px] text-white/35 flex items-center gap-1">
+              {thread.time}
+              {thread.visibility === 'followers' ? <FollowersIcon /> : <PublicIcon />}
+            </span>
             <div className="relative ml-auto">
               <button
                 className="bg-transparent border-none text-white/35 cursor-pointer py-0.5 px-1.5 rounded-md text-lg leading-none transition-colors hover:bg-white/10 hover:text-white/70 font-inherit"
@@ -736,7 +758,13 @@ export default function ThreadCard({
               id={`thread-share-${thread.id}`}
               onClick={(e) => {
                 e.stopPropagation();
-                setShowShareModal(true);
+                if (navigator.share) {
+                  navigator.share({
+                    url: `${typeof window !== 'undefined' ? window.location.origin : ''}/community/thread/${thread.id}`
+                  }).catch(() => {});
+                } else {
+                  setShowShareModal(true);
+                }
               }}
             >
               <div className="w-5 h-5 shrink-0 flex items-center justify-center">

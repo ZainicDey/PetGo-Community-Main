@@ -115,6 +115,7 @@ function mapApiPostToThread(
     followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet',
     petType: post.author?.pet_type,
+    visibility: post.visibility,
   };
 }
 

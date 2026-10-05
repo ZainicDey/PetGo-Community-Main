@@ -89,6 +89,7 @@ function mapApiPostToThread(
     followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet' || profile?.profile_type === 'pet',
     petType: post.author?.pet_type || profile?.pet_type,
+    visibility: post.visibility,
   };
 }
 
@@ -150,15 +151,15 @@ export default function ProfilePage() {
 
   const { data: myPosts = [], isLoading: isPostsLoading } = useGetUserPostsQuery(
     profile?.user_id ?? 0,
-    { skip: !profile?.user_id },
+    { skip: !profile?.user_id || activeTab !== 'posts' },
   );
   const { data: reposts = [], isLoading: isRepostsLoading } = useGetUserRepostsQuery(
     profile?.user_id ?? 0,
-    { skip: !profile?.user_id },
+    { skip: !profile?.user_id || activeTab !== 'reposts' },
   );
   const { data: saved = [], isLoading: isSavedLoading } = useGetUserSavedPostsQuery(
     profile?.user_id ?? 0,
-    { skip: !profile?.user_id },
+    { skip: !profile?.user_id || activeTab !== 'saved' },
   );
 
   const postsAsThreads = myPosts.map((p) => mapApiPostToThread(p, profile, false));

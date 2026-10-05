@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAppDispatch } from '@/lib/store/hooks';
-import { useGetProfileQuery } from '@/lib/store/services/usersApi';
+import { useGetMeQuery } from '@/lib/store/services/usersApi';
 import { postsApi } from '@/lib/store/services/postsApi';
 import { usersApi } from '@/lib/store/services/usersApi';
 
@@ -19,45 +19,49 @@ export function useRoutePreloader(
   currentRoute: 'feed' | 'profile' | 'search' | 'activity',
 ) {
   const dispatch = useAppDispatch();
-  const { data: profile } = useGetProfileQuery();
+  const { data: me } = useGetMeQuery();
   const hasPrefetched = useRef(false);
 
   useEffect(() => {
-    // Only prefetch once per mount and only when we have a profile
-    if (hasPrefetched.current || !profile?.user_id) return;
+    // Only prefetch once per mount and only when we have the user ID
+    if (hasPrefetched.current || !me?.id) return;
     hasPrefetched.current = true;
 
-    const userId = profile.user_id;
+    const userId = me.id;
 
-    switch (currentRoute) {
-      case 'feed':
-        // When on the feed, preload profile, search, and activity data
-        dispatch(usersApi.util.prefetch('getProfile', undefined, { force: false }));
-        dispatch(usersApi.util.prefetch('getUserPosts', userId, { force: false }));
-        dispatch(usersApi.util.prefetch('getUserReposts', userId, { force: false }));
-        dispatch(usersApi.util.prefetch('getUserSavedPosts', userId, { force: false }));
-        dispatch(usersApi.util.prefetch('getUserActivity', userId, { force: false }));
-        break;
+    // Delay all preloading by 3 seconds so the initial page data loads instantly
+    // without the browser throttling parallel requests
+    const timer = setTimeout(() => {
+      switch (currentRoute) {
+        case 'feed':
+          dispatch(usersApi.util.prefetch('getProfile', undefined, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserPosts', userId, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserReposts', userId, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserSavedPosts', userId, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserActivity', userId, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserLikes', userId, { force: false }));
+          dispatch(postsApi.util.prefetch('getFollowingFeed', undefined, { force: false }));
+          break;
 
-      case 'profile':
-        // When on profile, preload feed data and all profile tab data eagerly
-        dispatch(postsApi.util.prefetch('getPosts', { limit: 20, offset: 0 }, { force: false }));
-        dispatch(usersApi.util.prefetch('getUserPosts', userId, { force: false }));
-        dispatch(usersApi.util.prefetch('getUserReposts', userId, { force: false }));
-        dispatch(usersApi.util.prefetch('getUserSavedPosts', userId, { force: false }));
-        break;
+        case 'profile':
+          dispatch(postsApi.util.prefetch('getPosts', { limit: 20, offset: 0 }, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserPosts', userId, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserReposts', userId, { force: false }));
+          dispatch(usersApi.util.prefetch('getUserSavedPosts', userId, { force: false }));
+          break;
 
-      case 'search':
-        // When on search, preload feed and profile
-        dispatch(postsApi.util.prefetch('getPosts', { limit: 20, offset: 0 }, { force: false }));
-        dispatch(usersApi.util.prefetch('getProfile', undefined, { force: false }));
-        break;
+        case 'search':
+          dispatch(postsApi.util.prefetch('getPosts', { limit: 20, offset: 0 }, { force: false }));
+          dispatch(usersApi.util.prefetch('getProfile', undefined, { force: false }));
+          break;
 
-      case 'activity':
-        // When on activity, preload feed and profile
-        dispatch(postsApi.util.prefetch('getPosts', { limit: 20, offset: 0 }, { force: false }));
-        dispatch(usersApi.util.prefetch('getProfile', undefined, { force: false }));
-        break;
-    }
-  }, [currentRoute, dispatch, profile?.user_id]);
+        case 'activity':
+          dispatch(postsApi.util.prefetch('getPosts', { limit: 20, offset: 0 }, { force: false }));
+          dispatch(usersApi.util.prefetch('getProfile', undefined, { force: false }));
+          break;
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [currentRoute, dispatch, me?.id]);
 }

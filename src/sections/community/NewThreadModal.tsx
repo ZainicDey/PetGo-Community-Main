@@ -138,7 +138,6 @@ export default function NewThreadModal({ onClose, onPost, quotedThread }: NewThr
                 onChangeText={(val) => {
                   if (val.length <= MAX_CHARS) setText(val);
                 }}
-                autoFocus
               />
 
               {/* Media Previews */}

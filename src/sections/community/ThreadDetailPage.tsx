@@ -101,6 +101,7 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet',
     petType: post.author?.pet_type,
+    visibility: post.visibility,
   };
 }
 
@@ -192,6 +193,21 @@ const FishIcon = () => (
     <circle cx="16" cy="10.5" r="1.5" fill="white" />
     <path d="M11 8L10 3L14 6.5L11 8Z" />
     <path d="M11 16L10 21L14 17.5L11 16Z" />
+  </svg>
+);
+
+const PublicIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] text-inherit relative -top-[1px]" aria-label="Public post">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
+  </svg>
+);
+
+const FollowersIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[15px] h-[15px] text-inherit relative -top-[1px]" aria-label="Followers only post">
+    <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0-8a3 3 0 1 1-3 3 3 3 0 0 1 3-3zm0 10c-2.7 0-8 1.35-8 4v2h16v-2c0-2.65-5.3-4-8-4zm-6 4c.2-.71 3.3-2 6-2s5.8 1.29 6 2z" />
+    <path d="M17 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0-6a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm0 8c-1.86 0-3.86.67-4.94 1.54A6.19 6.19 0 0 1 13 18v2h8v-2c0-1.85-3.7-4-4-4z" />
   </svg>
 );
 
@@ -700,7 +716,10 @@ function QuotedPostEmbed({ post }: { post: Thread }) {
             </div>
           )}
           <span className="text-[13px] font-semibold text-white">{post.author}</span>
-          <span className="text-[13px] text-white/35">{post.time}</span>
+          <span className="text-[13px] text-white/35 flex items-center gap-1">
+            {post.time}
+            {post.visibility === 'followers' ? <FollowersIcon /> : <PublicIcon />}
+          </span>
         </div>
 
         {/* Content */}
@@ -877,37 +896,35 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
   /* Loading state */
   if (isLoading) {
     return (
-      <div className="max-w-[680px] mx-auto px-4 pb-20">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-[#101010]/92 backdrop-blur-md pt-3 pb-3 mb-1">
+      <div className="max-w-[680px] mx-auto px-0 sm:px-4 pb-20">
+        {/* ─── Header ─── */}
+        <div className="sticky top-0 z-10 bg-[#101010]/92 backdrop-blur-md py-1.5 sm:py-3 mb-0 sm:mb-1 px-4 sm:px-0 border-b border-white/5 sm:border-b-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button className="bg-transparent border-none text-white cursor-pointer p-2 rounded-full transition-colors hover:bg-white/10">
                 <BackArrowIcon />
               </button>
               <div>
-                <div className="h-4 bg-white/5 skeleton-shimmer rounded w-16 mb-1" />
-                <div className="h-3 bg-white/5 skeleton-shimmer rounded w-12" />
+                <h1 className="text-[17px] font-bold text-white m-0 leading-tight">PetGo</h1>
               </div>
             </div>
-            <button className="bg-white/8 border-none text-white/60 cursor-pointer p-2.5 rounded-full transition-colors hover:bg-white/15 hover:text-white">
-              <MoreIcon />
-            </button>
           </div>
         </div>
 
-        {/* Main card */}
-        <div className="border border-white/4 rounded-3xl bg-[#181818]/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-2">
+        {/* ─── Main card ─── */}
+        <div className="border-0 sm:border border-white/4 rounded-none sm:rounded-3xl bg-transparent sm:bg-[#181818]/70 sm:backdrop-blur-2xl shadow-none sm:shadow-[0_8px_32px_rgba(255,255,255,0.022)] overflow-hidden mt-0 sm:mt-2">
           <div className="px-5 pt-5 pb-2">
             {/* Author row */}
             <div className="flex items-center gap-3 mb-3">
               <div className="w-11 h-11 rounded-full bg-white/5 skeleton-shimmer" />
               <div className="flex items-baseline gap-2 flex-1">
                 <div className="h-4 bg-white/5 skeleton-shimmer rounded w-24" />
-                <div className="h-3 bg-white/5 skeleton-shimmer rounded w-8" />
+                <div className="h-3 bg-white/5 skeleton-shimmer rounded w-16" />
               </div>
-              <div className="ml-auto w-6 h-4 flex items-center justify-center">
-                <span className="text-white/35 text-lg">···</span>
+              <div className="relative ml-auto">
+                <button className="bg-transparent border-none text-white/35 cursor-pointer py-0.5 px-1.5 rounded-md text-lg leading-none">
+                  ···
+                </button>
               </div>
             </div>
 
@@ -923,7 +940,7 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
             </div>
 
             {/* Engagement bar */}
-            <div className="flex items-center gap-4 py-2">
+            <div className="flex items-center justify-start gap-4 sm:gap-4 py-2 w-full flex-wrap">
               {[1, 2, 3, 4].map(i => (
                 <div key={i} className="flex items-center gap-1.5 py-1 px-1.5">
                   <div className="w-5 h-5 rounded bg-white/5 skeleton-shimmer" />
@@ -935,19 +952,23 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
 
           {/* Sort + View activity */}
           <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/5">
-            <div className="h-4 bg-white/5 skeleton-shimmer rounded w-14" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded bg-white/5 skeleton-shimmer" />
+              <div className="h-3.5 bg-white/5 skeleton-shimmer rounded w-10" />
+            </div>
             <div className="h-3 bg-white/5 skeleton-shimmer rounded w-20" />
           </div>
 
           {/* Reply input */}
           <div className="border-t border-b border-white/5">
-            <div className="flex items-center gap-3 px-5 py-3.5">
-              <div className="w-9 h-9 rounded-full bg-white/5 skeleton-shimmer shrink-0" />
-              <div className="flex-1 h-5 bg-white/5 skeleton-shimmer rounded" />
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-6 h-6 rounded bg-white/5 skeleton-shimmer" />
-                <div className="w-6 h-6 rounded bg-white/5 skeleton-shimmer" />
-                <div className="w-6 h-6 rounded bg-white/5 skeleton-shimmer" />
+            <div className="flex items-start gap-3 px-5 py-3.5">
+              <div className="w-9 h-9 rounded-full bg-white/5 skeleton-shimmer shrink-0 mt-0.5" />
+              <div className="flex-1 flex flex-col justify-center min-h-[36px]">
+                <div className="h-4 bg-white/5 skeleton-shimmer rounded w-1/3" />
+              </div>
+              <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded bg-white/5 skeleton-shimmer m-1.5" />
+                <div className="w-[66px] h-[30px] rounded-full bg-white/5 skeleton-shimmer ml-1" />
               </div>
             </div>
           </div>
@@ -1059,7 +1080,10 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                   </span>
                 )}
               </span>
-              <span className="text-[14px] text-white/35">{thread.time}</span>
+              <span className="text-[14px] text-white/35 flex items-center gap-1">
+                {thread.time}
+                {thread.visibility === 'followers' ? <FollowersIcon /> : <PublicIcon />}
+              </span>
             </div>
             <div className="relative ml-auto">
               <button
@@ -1236,10 +1260,15 @@ export default function ThreadDetailPage({ threadId }: ThreadDetailPageProps) {
                 e.stopPropagation();
                 if (!thread) return;
                 const url = `${window.location.origin}/community/thread/${thread.id}`;
-                navigator.clipboard.writeText(url).then(() => {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                });
+                
+                if (navigator.share) {
+                  navigator.share({ url }).catch(() => {});
+                } else if (navigator.clipboard) {
+                  navigator.clipboard.writeText(url).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }).catch(() => {});
+                }
               }}
             >
               <div className="w-5 h-5 shrink-0 flex items-center justify-center">

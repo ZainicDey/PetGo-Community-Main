@@ -81,7 +81,10 @@ export const usersApi = api.injectEndpoints({
         url: `/users/${userId}/follow`,
         method: 'POST',
       }),
-      invalidatesTags: [{ type: 'Follow', id: 'LIST' }],
+      invalidatesTags: (_r, _e, userId) => [
+        { type: 'Follow', id: 'LIST' },
+        { type: 'Profile', id: userId },
+      ],
     }),
 
     unfollowUser: builder.mutation<void, number>({
@@ -89,7 +92,10 @@ export const usersApi = api.injectEndpoints({
         url: `/users/${userId}/follow`,
         method: 'DELETE',
       }),
-      invalidatesTags: [{ type: 'Follow', id: 'LIST' }],
+      invalidatesTags: (_r, _e, userId) => [
+        { type: 'Follow', id: 'LIST' },
+        { type: 'Profile', id: userId },
+      ],
     }),
 
     getFollowers: builder.query<UserBasicInfo[], number>({

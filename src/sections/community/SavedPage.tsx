@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useGetProfileQuery, useGetUserSavedPostsQuery } from '@/lib/store/services/usersApi';
+import { useFirstVisitSkeleton } from '@/lib/hooks/useFirstVisitSkeleton';
 import ThreadCard, { type Thread } from './ThreadCard';
 import ThreadFeedSkeleton from './ThreadSkeleton';
 import type { ApiPost, ApiProfile } from '@/lib/store/types';
@@ -56,6 +57,7 @@ function mapApiPostToThread(post: ApiPost, profile?: ApiProfile): Thread {
     followerCount: post.author?.follower_count,
     isPetProfile: post.author?.profile_type === 'pet',
     petType: post.author?.pet_type,
+    visibility: post.visibility,
   };
 }
 
@@ -65,6 +67,7 @@ export default function SavedPage() {
   const { data: savedPosts = [], isLoading: isSavedLoading } = useGetUserSavedPostsQuery(profile?.user_id as number, {
     skip: !profile?.user_id,
   });
+  const showFirstVisitSkeleton = useFirstVisitSkeleton('saved', 1000);
 
   const savedAsThreads = savedPosts.map((p) => mapApiPostToThread(p, profile));
 
@@ -76,7 +79,7 @@ export default function SavedPage() {
       </div>
 
       <div className="border border-white/4 max-sm:border-0 rounded-3xl max-sm:rounded-none bg-[#181818]/70 max-sm:bg-transparent backdrop-blur-2xl max-sm:backdrop-blur-none shadow-[0_8px_32px_rgba(255,255,255,0.022)] max-sm:shadow-none overflow-hidden mt-4 max-sm:mt-0">
-        {isSavedLoading ? (
+        {(showFirstVisitSkeleton || isSavedLoading) ? (
           <ThreadFeedSkeleton />
         ) : savedAsThreads.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-white/30">
